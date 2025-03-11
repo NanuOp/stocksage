@@ -1,64 +1,172 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { 
+    Container, TextField, Typography, Card, CardContent, CircularProgress, Grid, Autocomplete, Button 
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
 const StockSearch = () => {
-  const [stockCode, setStockCode] = useState("");
-  const [stockData, setStockData] = useState(null);
-  const [error, setError] = useState("");
+    const [stockName, setStockName] = useState("");
+    const [stockData, setStockData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+    const [randomStocks, setRandomStocks] = useState([]);
 
-  const fetchStockData = async () => {
-    setError("");
-    setStockData(null);
+    const API_BASE_URL = "http://127.0.0.1:8000/api";
 
-    if (!stockCode) {
-      setError("Please enter a stock code.");
-      return;
-    }
+    // Fetch stock suggestions from the database
+    const fetchSuggestions = async (query) => {
+        if (!query) {
+            setSuggestions([]);
+            return;
+        }
 
-    try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/stock/${stockCode}/`);
-      
-      if (response.data.success) {
-        setStockData(response.data.data);
-      } else {
-        setError("Stock not found.");
-      }
-    } catch (err) {
-      setError("Error fetching stock data.");
-    }
-  };
+        try {
+            const response = await axios.get(`${API_BASE_URL}/suggestions/?q=${query}`);
+            if (response.data.success) {
+                setSuggestions(response.data.data);  
+            }
+        } catch (err) {
+            console.error("Error fetching stock suggestions:", err);
+        }
+    };
 
-  return (
-    <div className="container">
-      <h2>Stock Info Lookup</h2>
-      <input
-        type="text"
-        placeholder="Enter Stock Code (e.g., 500209)"
-        value={stockCode}
-        onChange={(e) => setStockCode(e.target.value)}
-      />
-      <button onClick={fetchStockData}>Search</button>
+    // Fetch random stocks for "Analyse" section
+    const fetchRandomStocks = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/random-stocks/`);
+            if (response.data.success) {
+                setRandomStocks(response.data.data);  
+            }
+        } catch (err) {
+            console.error("Error fetching random stocks:", err);
+        }
+    };
 
-      {error && <p className="error">{error}</p>}
+    // Fetch stock data
+    const fetchStockData = async (stockCode) => {
+        setError("");
+        setStockData(null);
+        setLoading(true);
 
-      {stockData && (
-        <div className="stock-details">
-          <h3>{stockData.companyName} ({stockData.securityID})</h3>
-          <p><strong>Stock Code:</strong> {stockData.scripCode}</p>
-          <p><strong>Current Price:</strong> ₹{stockData.currentValue}</p>
-          <p><strong>Change:</strong> {stockData.change} ({stockData.pChange}%)</p>
-          <p><strong>Day High:</strong> ₹{stockData.dayHigh}</p>
-          <p><strong>Day Low:</strong> ₹{stockData.dayLow}</p>
-          <p><strong>52-Week High:</strong> ₹{stockData["52weekHigh"]}</p>
-          <p><strong>52-Week Low:</strong> ₹{stockData["52weekLow"]}</p>
-          <p><strong>Market Cap:</strong> {stockData.marketCapFull}</p>
-          <p><strong>Industry:</strong> {stockData.industry}</p>
-          <p><strong>Face Value:</strong> ₹{stockData.faceValue}</p>
-          <p><strong>Last Updated:</strong> {stockData.updatedOn}</p>
-        </div>
-      )}
-    </div>
-  );
+        try {
+            const response = await axios.get(`${API_BASE_URL}/stock/${stockCode}/`);
+            if (response.data.success) {
+                setStockData(response.data.data);
+            } else {
+                setError("Stock not found.");
+            }
+        } catch (err) {
+            setError("Error fetching stock data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRandomStocks();
+    }, []);
+
+    return (
+        <Container maxWidth="md" sx={{ mt: 8, textAlign: "center" }}>
+            {/* Branding */}
+            <Typography variant="h3" sx={{ fontWeight: "bold", fontFamily: "Poppins, sans-serif" }}>
+                StockSage
+            </Typography>
+            <Typography variant="h6" color="textSecondary" sx={{ mb: 4, fontFamily: "Poppins, sans-serif" }}>
+                Smart stock analysis and screening for informed investing.
+            </Typography>
+            
+            {/* Search Bar */}
+            <Grid container spacing={2} justifyContent="center">
+                <Grid item xs={9}>
+                    <Autocomplete
+                        freeSolo
+                        options={suggestions}
+                        getOptionLabel={(option) => option.name}
+                        onInputChange={(event, newValue) => {
+                            setStockName(newValue);
+                            fetchSuggestions(newValue);
+                        }}
+                        onChange={(event, newValue) => {
+                            if (newValue) {
+                                setStockName(newValue.name);
+                                fetchStockData(newValue.code);
+                            }
+                        }}
+                        renderInput={(params) => (
+                            <TextField 
+                                {...params}
+                                fullWidth 
+                                variant="outlined"
+                                label="Search for a company..."
+                            />
+                        )}
+                    />
+                </Grid>
+                <Grid item xs={3}>
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        fullWidth
+                        startIcon={<SearchIcon />} 
+                        onClick={() => fetchStockData(stockName)}
+                    >
+                        Search
+                    </Button>
+                </Grid>
+            </Grid>
+
+            {/* Analyse Section */}
+            {randomStocks.length > 0 && (
+                <Typography variant="h6" sx={{ mt: 4, fontWeight: "medium", fontFamily: "Poppins, sans-serif" }}>
+                    Or analyse:
+                </Typography>
+            )}
+            <Grid container spacing={1} justifyContent="center" sx={{ mt: 1 }}>
+                {randomStocks.map((stock) => (
+                    <Grid item key={stock.code}>
+                        <Button 
+                            variant="outlined" 
+                            sx={{ textTransform: "none", fontFamily: "Poppins, sans-serif" }}
+                            onClick={() => fetchStockData(stock.code)}
+                        >
+                            {stock.name}
+                        </Button>
+                    </Grid>
+                ))}
+            </Grid>
+
+            {/* Loading Indicator */}
+            {loading && <CircularProgress sx={{ mt: 3 }} />}
+
+            {/* Error Message */}
+            {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
+
+            {/* Stock Data Display */}
+            {stockData && (
+                <Card sx={{ mt: 4, p: 2, boxShadow: 3 }}>
+                    <CardContent>
+                        <Typography variant="h5" gutterBottom>
+                            {stockData.companyName} ({stockData.securityID})
+                        </Typography>
+                        <Typography variant="body1"><strong>Stock Code:</strong> {stockData.scripCode}</Typography>
+                        <Typography variant="body1"><strong>Current Price:</strong> ₹{stockData.currentValue}</Typography>
+                        <Typography variant="body1"><strong>Change:</strong> {stockData.change} ({stockData.pChange}%)</Typography>
+                        <Typography variant="body1"><strong>Day High:</strong> ₹{stockData.dayHigh}</Typography>
+                        <Typography variant="body1"><strong>Day Low:</strong> ₹{stockData.dayLow}</Typography>
+                        <Typography variant="body1"><strong>52-Week High:</strong> ₹{stockData["52weekHigh"]}</Typography>
+                        <Typography variant="body1"><strong>52-Week Low:</strong> ₹{stockData["52weekLow"]}</Typography>
+                        <Typography variant="body1"><strong>Market Cap:</strong> {stockData.marketCapFull}</Typography>
+                        <Typography variant="body1"><strong>Industry:</strong> {stockData.industry}</Typography>
+                        <Typography variant="body1"><strong>Face Value:</strong> ₹{stockData.faceValue}</Typography>
+                        <Typography variant="body2" color="textSecondary">Last Updated: {stockData.updatedOn}</Typography>
+                    </CardContent>
+                </Card>
+            )}
+        </Container>
+    );
 };
 
 export default StockSearch;
