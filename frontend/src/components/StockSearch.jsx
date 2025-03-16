@@ -25,9 +25,9 @@ const StockSearch = () => {
     }
   };
 
-  const handleSearch = (stockCode) => {
-    if (stockCode) {
-      navigate(`/stock/${stockCode}`);
+  const handleSearch = (ticker) => {
+    if (ticker) {
+      navigate(`/stock/${ticker}`);
     }
   };
 
@@ -74,7 +74,7 @@ const StockSearch = () => {
           }}
           onChange={(event, newValue) => {
             if (newValue) {
-              handleSearch(newValue.code);
+              handleSearch(newValue.ticker); // ✅ Fix: Correct field for ticker
             }
           }}
           renderInput={(params) => (
@@ -84,8 +84,8 @@ const StockSearch = () => {
               variant="outlined"
               label="Search for a company..."
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  handleSearch(stockName);
+                if (event.key === "Enter" && suggestions.length > 0) {
+                  handleSearch(suggestions[0].ticker); // ✅ Fix: Select first suggestion on Enter
                 }
               }}
             />
@@ -103,6 +103,7 @@ const StockSearch = () => {
           }}
           startIcon={<SearchIcon />}
           onClick={() => handleSearch(stockName)}
+          disabled={!stockName} // ✅ Fix: Disable if empty
         >
           Search
         </Button>

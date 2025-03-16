@@ -1,70 +1,180 @@
 import requests
-from bs4 import BeautifulSoup
+import yfinance as yf
 import json
+import random
+from bs4 import BeautifulSoup
 from django.http import JsonResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from bsedata.bse import BSE
-from api.models import Stock  # Ensure 'Stock' is your model name
-import random
-import re
-
-# Initialize BSE object
-bse = BSE()
+from api.models import Stock
+import datetime
 
 def home(request):
-    return JsonResponse({"message": "Hello from Django!"})
-
+    """API Health Check"""
+    return JsonResponse({"message": "Hello from Django API!"})
 
 def suggestions(request):
     """
-    Search for stocks by name or code.
-    Suggest companies that start with the query first.
-    If fewer than 10 matches, include those that contain the query.
+    Search for stocks by name or ticker.
     """
     query = request.GET.get("q", "").strip()
-
     if not query:
         return JsonResponse({"success": False, "data": []})
 
-    # Get companies that start with the query
     starting_stocks = Stock.objects.filter(
-        Q(name__istartswith=query) | Q(code__istartswith=query)
+        Q(name__istartswith=query) | Q(security_id__istartswith=query)
     )
 
-    # If fewer than 10 results, get additional ones that contain the query
     if starting_stocks.count() < 10:
         containing_stocks = Stock.objects.filter(
-            Q(name__icontains=query) | Q(code__icontains=query)
-        ).exclude(id__in=starting_stocks)  # Avoid duplicates
+            Q(name__icontains=query) | Q(security_id__icontains=query)
+        ).exclude(id__in=starting_stocks)
 
-        # Combine both results
         stocks = list(starting_stocks) + list(containing_stocks[:10 - starting_stocks.count()])
     else:
-        stocks = list(starting_stocks[:10])  # Limit to 10 results
+        stocks = list(starting_stocks[:10])
 
-    data = [{"name": stock.name, "code": stock.code} for stock in stocks]
-
+    data = [{"name": stock.name, "ticker": stock.security_id} for stock in stocks]
     return JsonResponse({"success": True, "data": data})
 
-def get_stock_info(request, code):
-    """
-    Fetch stock details from BSE API and company overview from Screener.in.
-    """
-    stock = get_object_or_404(Stock, code=code)
 
+def fetch_real_time_price(ticker, stock_code):
+    """
+    Fetches real-time stock price and updated timestamp from Google Finance.
+    - First, it tries with `ticker:NSE`
+    - If no price is found, it tries with `stock_code:BOM`
+    """
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    source = None  # Track price source
+    updated_time = "N/A"  # Initialize updated time
+
+    # 1st attempt: Using Ticker (NSE)
+    url_nse = f"https://www.google.com/finance/quote/{ticker}:NSE?hl=en"
     try:
-        quote = bse.getQuote(code)
-        if not quote:
-            return JsonResponse({"success": False, "message": f"No data found for stock code {code}"}, status=404)
+        response = requests.get(url_nse, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-        stock_data = {k: v for k, v in quote.items() if k not in ["buy", "sell"]}
-        stock_data["about"] = fetch_company_overview(stock.name, stock.code)
+        # Fetch the price
+        price_element = soup.find('div', class_="YMlKec fxKbKc")
+        if price_element:
+            price = float(price_element.text.strip().replace(",", "").replace("₹", ""))
+            source = "NSE"
 
-        return JsonResponse({"success": True, "data": stock_data})
+            # Fetch the updated time
+            time_element = soup.find('div', class_="ygUjEc")
+            if time_element:
+                updated_time = time_element.text.strip().split("·")[0].strip()
 
+            return price, source, updated_time
     except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+        print(f"Error fetching price from NSE: {e}")
+
+    # 2nd attempt: Using Stock Code (BSE)
+    url_bse = f"https://www.google.com/finance/quote/{stock_code}:BOM?hl=en"
+    try:
+        response = requests.get(url_bse, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Fetch the price
+        price_element = soup.find('div', class_="YMlKec fxKbKc")
+        if price_element:
+            price = float(price_element.text.strip().replace(",", "").replace("₹", ""))
+            source = "BSE"
+
+            # Fetch the updated time
+            time_element = soup.find('div', class_="ygUjEc")
+            if time_element:
+                updated_time = time_element.text.strip().split("·")[0].strip()
+
+            return price, source, updated_time
+    except Exception as e:
+        print(f"Error fetching price from BSE: {e}")
+
+    return None, None, "N/A"  # Return None if both attempts fail
+
+
+def get_stock_info(request, security_id):
+    """
+    Fetch stock data using yfinance & real-time price from Google Finance.
+    """
+    stock = get_object_or_404(Stock, security_id=security_id.upper())
+
+    # Get real-time stock price and updated time
+    real_time_price, price_source, updated_time = fetch_real_time_price(stock.security_id, stock.code)
+
+    # Determine Yahoo Finance ticker suffix based on price source
+    ticker_suffix = ".NS" if price_source == "NSE" else ".BO" if price_source == "BSE" else None
+    stock_info = {}
+
+    if ticker_suffix:
+        ticker_symbol = stock.security_id + ticker_suffix
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            stock_info = ticker.info
+        except Exception as e:
+            print(f"Error fetching stock info from Yahoo Finance: {e}")
+
+    # Define required fields
+    required_fields = {
+        "companyName": "longName",
+        "realTimePrice": "regularMarketPrice",
+        "previousClose": "regularMarketPreviousClose",
+        "updatedOn": "regularMarketTime",
+        "address": "address1",
+        "city": "city",
+        "zip": "zip",
+        "country": "country",
+        "contact": "phone",
+        "website": "website",
+        "industry": "industry",
+        "sector": "sector",
+        "longBusinessSummary": "longBusinessSummary",
+        "fullTimeEmployees": "fullTimeEmployees",
+        "marketCap": "marketCap",
+        "dayHigh": "dayHigh",
+        "dayLow": "dayLow",
+        "open": "open",
+        "totalRevenue": "totalRevenue",
+        "debtToEquity": "debtToEquity",
+        "trailingPE": "trailingPE",
+        "forwardPE": "forwardPE",
+        "volume": "volume",
+        "fiftyTwoWeekHigh": "fiftyTwoWeekHigh",
+        "fiftyTwoWeekLow": "fiftyTwoWeekLow",
+        "quoteType": "quoteType",
+        "grossProfits": "grossProfits",
+        "totalDebt": "totalDebt",
+        "previousClose": "previousClose", 
+        "open":"open", 
+        "beta": "beta",
+        "trailingPE": "trailingPE",
+    }
+
+    # Extract only required fields
+    # stock_info = {key: stock_info.get(field, "N/A") for key, field in required_fields.items()}
+
+    # Override real-time price with Google Finance price if available
+    stock_info["realTimePrice"] = real_time_price if real_time_price else stock_info["realTimePrice"]
+    stock_info["priceSource"] = price_source if price_source else "Yahoo Finance"
+
+    # Use the Google Finance timestamp for `updatedOn`
+    stock_info["updatedOn"] = updated_time
+
+    # Calculate change and pChange
+    previous_close = stock_info.get("previousClose", "N/A")
+
+    if isinstance(real_time_price, (int, float)) and isinstance(previous_close, (int, float)) and previous_close > 0:
+        change = real_time_price - previous_close
+        pChange = (change / previous_close) * 100
+
+        stock_info["change"] = f"{'+' if change > 0 else ''}{change:.2f}"
+        stock_info["pChange"] = f"{'+' if pChange > 0 else ''}{pChange:.2f}%"
+    else:
+        stock_info["change"] = "N/A"
+        stock_info["pChange"] = "N/A"
+
+    return JsonResponse({"success": True, "data": stock_info}, json_dumps_params={'ensure_ascii': False})
+
 
 def get_random_stocks(request):
     """
@@ -72,63 +182,7 @@ def get_random_stocks(request):
     """
     stocks = list(Stock.objects.all())
     random.shuffle(stocks)
-    selected_stocks = stocks[:5]  
-    data = [{"name": stock.name, "code": stock.code} for stock in selected_stocks]
+    selected_stocks = stocks[:5]
+    data = [{"name": stock.name, "ticker": stock.security_id} for stock in selected_stocks]
 
     return JsonResponse({"success": True, "data": data})
-
-def fetch_company_overview(symbol, code):
-    """
-    Fetches company overview from Screener.in using stock symbol and code.
-    Removes everything after 'Read More'.
-    """
-    base_url = "https://www.screener.in/company/"
-    possible_urls = [
-        f"{base_url}{symbol}/",
-        f"{base_url}{symbol}/consolidated/",
-        f"{base_url}{code}/",
-        f"{base_url}{code}/consolidated/",
-    ]
-
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    
-    for url in possible_urls:
-        try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                
-                company_info_div = soup.find("div", class_="company-info")
-                if not company_info_div:
-                    continue
-                
-                for a_tag in company_info_div.find_all("a"):
-                    a_tag.decompose()
-                
-                text_content = company_info_div.get_text(" ", strip=True)
-                
-                if "Read More" in text_content:
-                    overview = text_content.split("Read More")[0]
-                    return {"overview": overview.strip()}
-                
-                return {"overview": text_content.strip()}
-
-        except Exception as e:
-            print(f"Error fetching {url}: {e}")
-            continue  
-    
-    return {"error": "Company information not available."}
-
-def get_company_overview(request, stock_code):
-    """
-    Fetches company overview from Screener.in for a given stock code.
-    """
-    stock = get_object_or_404(Stock, code=stock_code)
-    overview = fetch_company_overview(stock.name, stock.code)
-
-    return JsonResponse({
-        "success": True,
-        "stock_code": stock.code,
-        "company_name": stock.name,
-        "company_overview": overview
-    })
