@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from api.models import Stock
 import datetime
+import pandas as pd
 
 def home(request):
     """API Health Check"""
@@ -186,3 +187,54 @@ def get_random_stocks(request):
     data = [{"name": stock.name, "ticker": stock.security_id} for stock in selected_stocks]
 
     return JsonResponse({"success": True, "data": data})
+
+from datetime import datetime, timedelta
+
+def get_historical_data(request, security_id):
+    """
+    Fetch historical stock data from Yahoo Finance for NSE tickers.
+    Users can specify:
+    - `start_date` and `end_date`
+    - OR `years` (number of past years)
+    - Defaults to last 10 years if no input is provided.
+    """
+    stock = get_object_or_404(Stock, security_id=security_id.upper())
+
+    # Define ticker for NSE
+    ticker_ns = f"{security_id}.NS"
+
+    # Get user-specified parameters
+    start_date = request.GET.get("start_date", None)
+    end_date = request.GET.get("end_date", datetime.today().strftime("%Y-%m-%d"))  # Default: Today
+    years = request.GET.get("years", None)  # Number of past years
+
+    # If years is provided, override start_date
+    if years and years.isdigit():
+        start_date = (datetime.today() - timedelta(days=int(years) * 365)).strftime("%Y-%m-%d")
+
+    # Default to past 10 years if no valid dates provided
+    if not start_date:
+        start_date = (datetime.today() - timedelta(days=10 * 365)).strftime("%Y-%m-%d")
+
+    try:
+        # Fetch data from Yahoo Finance
+        df_ns = yf.download(ticker_ns, start=start_date, end=end_date)
+
+        def format_dataframe(df):
+            if df.empty:
+                return []
+            df = df.reset_index()
+            df["Date"] = df["Date"].astype(str)  # Convert Date to string for JSON
+            df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+            return df.to_dict(orient="records")
+
+        return JsonResponse({
+            "success": True,
+            "ticker_ns": ticker_ns,
+            "start_date": start_date,
+            "end_date": end_date,
+            "nse_data": format_dataframe(df_ns),
+        }, safe=False)
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
