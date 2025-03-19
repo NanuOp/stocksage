@@ -1,28 +1,19 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { CssBaseline, Container } from "@mui/material";
-import Navbar from "./components/Navbar.jsx";
-import StockSearch from "./components/StockSearch";
-import StockDetails from "./components/StockDetails";
-import "@fontsource/poppins";
-
-const Home = () => <Container><StockSearch /></Container>;
-const About = () => <Container><h2>About StockSage</h2><p>StockSage provides real-time stock analysis...</p></Container>;
-const Login = () => <Container><h2>Login</h2><p>Login functionality coming soon...</p></Container>;
+import { CssBaseline } from "@mui/material";
+import HomePage from "./pages/HomePage";
+import StockDetailsPage from "./pages/StockDetailsPage"; // Updated import
 
 function App() {
-    return (
-        <Router>
-            <CssBaseline />
-            <Navbar />
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/stock/:stockCode" element={<StockDetails />} />
-            </Routes>
-        </Router>
-    );
+  return (
+    <Router>
+      <CssBaseline />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/stock/:stockCode" element={<StockDetailsPage />} /> {/* Updated Route */}
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
