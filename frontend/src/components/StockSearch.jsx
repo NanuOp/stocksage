@@ -8,7 +8,8 @@ const StockSearch = ({ isNavbar = false }) => {
   const [stockName, setStockName] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "http://192.168.29.94:8000/api";
+  // ✅ Use network IP
 
   const fetchSuggestions = async (query) => {
     if (!query) {

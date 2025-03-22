@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import { Container, Typography, Grid, Divider, Box } from "@mui/material";
+import { Container, Typography, Grid, Card, CardContent, Divider, Box } from "@mui/material";
 import Navbar from "../components/Navbar";
-import StockChart from "../components/StockChart";  // ✅ Import StockChart
+import StockChart from "../components/StockChart";
 import "@fontsource/poppins";
 
 const StockDetailsPage = () => {
   const { stockCode } = useParams();
   const [stockData, setStockData] = useState(null);
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const API_BASE_URL = "http://192.168.29.94:8000/api";
 
   const fetchStockDetails = async () => {
     try {
@@ -30,7 +30,7 @@ const StockDetailsPage = () => {
 
   if (!stockData) {
     return (
-      <Typography variant="h6" align="center" sx={{ fontFamily: "Poppins, sans-serif", color: "#e2e8f0" }}>
+      <Typography variant="h6" align="center" sx={{ fontFamily: "Poppins, sans-serif", color: "#212529" }}>
         Loading...
       </Typography>
     );
@@ -39,106 +39,85 @@ const StockDetailsPage = () => {
   return (
     <>
       <Navbar />
-      <Container
-        maxWidth={false}
-        sx={{
-          width: "100vw",
-          fontFamily: "Poppins, sans-serif",
-          px: 5,
-          bgcolor: "#0f172a",
-          color: "#e2e8f0",
-          minHeight: "100vh",
-          paddingTop: 0,
-        }}
-      >
-        {/* Stock Name & Price */}
-        <Typography variant="h3" fontWeight="bold" sx={{ color: "#e2e8f0", textAlign: "center", mt: 0 }}>
+      <Container maxWidth={false} sx={{ fontFamily: "Poppins, sans-serif", pt: 4, pb: 4, px: 6 }}>
+        <Typography variant="h3" fontWeight="bold" align="center" gutterBottom>
           {stockData.longName} ({stockData.symbol})
         </Typography>
         <Typography
           variant="h5"
-          sx={{
-            textAlign: "center",
-            color: stockData.change.startsWith("+") ? "#4caf50" : "#f44336",
-            mb: 2,
-          }}
+          align="center"
+          sx={{ color: stockData.change.startsWith("+") ? "#28a745" : "#dc3545", mb: 2 }}
         >
           ₹ {stockData.realTimePrice?.toFixed(2)} ({stockData.change} / {stockData.pChange})
         </Typography>
-        <Typography variant="subtitle2" color="gray" textAlign="center">
+        <Typography variant="subtitle2" color="gray" align="center" gutterBottom>
           Updated on: {stockData.updatedOn}
         </Typography>
 
-        <Divider sx={{ my: 3, bgcolor: "#444" }} />
+        <Divider sx={{ my: 3 }} />
 
-        {/* First Row: Financials, Valuation Ratios, Trading Volume, Stock Performance */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={3}>
-            <Box sx={{ p: 3, bgcolor: "#1e293b", borderRadius: 2, minHeight: "100%" }}>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: "#e2e8f0" }}>Financials</Typography>
-              <Typography>Stock P/E: {stockData.trailingPE}</Typography>
-              <Typography>Market Cap: ₹ {stockData.marketCap?.toLocaleString()}</Typography>
-              {stockData.totalRevenue && <Typography>Total Revenue: ₹ {stockData.totalRevenue?.toLocaleString()}</Typography>}
-              {stockData.debtToEquity && <Typography>Debt to Equity: {stockData.debtToEquity}</Typography>}
-              {stockData.grossProfits && <Typography>Gross Profits: ₹ {stockData.grossProfits?.toLocaleString()}</Typography>}
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={3}>
-            <Box sx={{ p: 3, bgcolor: "#1e293b", borderRadius: 2, minHeight: "100%" }}>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: "#e2e8f0" }}>Valuation Ratios</Typography>
-              <Typography>Beta: {stockData.beta}</Typography>
-              {stockData.trailingPE && <Typography>Trailing P/E: {stockData.trailingPE}</Typography>}
-              {stockData.forwardPE && <Typography>Forward P/E: {stockData.forwardPE}</Typography>}
-              {stockData.bookValue && <Typography>Book Value: ₹ {stockData.bookValue}</Typography>}
-              {stockData.priceToBook && <Typography>Price to Book Ratio: {stockData.priceToBook}</Typography>}
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={3}>
-            <Box sx={{ p: 3, bgcolor: "#1e293b", borderRadius: 2, minHeight: "100%", display: "flex", flexDirection: "column" }}>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: "#e2e8f0" }}>Trading Volume</Typography>
-              <Typography>Previous Close: ₹ {stockData.regularMarketPreviousClose}</Typography>
-              <Typography>Market Open: ₹ {stockData.regularMarketOpen}</Typography>
-              <Typography>Day High/Low: ₹ {stockData.dayHigh} / ₹ {stockData.dayLow}</Typography>
-              <Typography>Regular Volume: {stockData.regularMarketVolume?.toLocaleString()}</Typography>
-              <Typography>Average Volume: {stockData.averageVolume?.toLocaleString()}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={3}>
-            <Box sx={{ p: 3, bgcolor: "#1e293b", borderRadius: 2, minHeight: "100%", display: "flex", flexDirection: "column" }}>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: "#e2e8f0" }}>Stock Performance</Typography>
-              <Typography>Previous Close: ₹ {stockData.regularMarketPreviousClose}</Typography>
-              <Typography>Open: ₹ {stockData.regularMarketOpen}</Typography>
-              <Typography>52-Week High/Low: ₹ {stockData.fiftyTwoWeekHigh} / ₹ {stockData.fiftyTwoWeekLow}</Typography>
-            </Box>
-          </Grid>
+          {["Financials", "Valuation Ratios", "Trading Volume", "Stock Performance"].map((title, index) => (
+            <Grid item xs={12} md={3} key={index}>
+              <Card sx={{ borderRadius: 4, boxShadow: 3, p: 2, height: "100%" }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    {title}
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {(() => {
+                      switch (title) {
+                        case "Financials":
+                          return [
+                            `Stock P/E: ${stockData.trailingPE}`,
+                            `Market Cap: ₹ ${stockData.marketCap?.toLocaleString()}`,
+                            stockData.totalRevenue && `Total Revenue: ₹ ${stockData.totalRevenue?.toLocaleString()}`,
+                            stockData.debtToEquity && `Debt to Equity: ${stockData.debtToEquity}`,
+                            stockData.grossProfits && `Gross Profits: ₹ ${stockData.grossProfits?.toLocaleString()}`,
+                          ];
+                        case "Valuation Ratios":
+                          return [
+                            `Beta: ${stockData.beta}`,
+                            `Trailing P/E: ${stockData.trailingPE}`,
+                            stockData.forwardPE && `Forward P/E: ${stockData.forwardPE}`,
+                            stockData.bookValue && `Book Value: ₹ ${stockData.bookValue}`,
+                            stockData.priceToBook && `Price to Book Ratio: ${stockData.priceToBook}`,
+                          ];
+                        case "Trading Volume":
+                          return [
+                            `Previous Close: ₹ ${stockData.regularMarketPreviousClose}`,
+                            `Market Open: ₹ ${stockData.regularMarketOpen}`,
+                            `Day High/Low: ₹ ${stockData.dayHigh} / ₹ ${stockData.dayLow}`,
+                            `Regular Volume: ${stockData.regularMarketVolume?.toLocaleString()}`,
+                            `Average Volume: ${stockData.averageVolume?.toLocaleString()}`,
+                          ];
+                        case "Stock Performance":
+                          return [
+                            `Previous Close: ₹ ${stockData.regularMarketPreviousClose}`,
+                            `Open: ₹ ${stockData.regularMarketOpen}`,
+                            `52-Week High/Low: ₹ ${stockData.fiftyTwoWeekHigh} / ₹ ${stockData.fiftyTwoWeekLow}`,
+                          ];
+                        default:
+                          return [];
+                      }
+                    })().map((text, idx) => text && (
+                      <Grid item xs={12} key={idx}>
+                        <Card sx={{ p: 1, bgcolor: "#f5f5f5", boxShadow: 1 }}>
+                          <CardContent>
+                            <Typography variant="body2">{text}</Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
         </Grid>
 
-        <Divider sx={{ my: 3, bgcolor: "#444" }} />
+        <Divider sx={{ my: 3 }} />
 
-        {/* Company Info */}
-        {stockData.industry && (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Box sx={{ p: 3, bgcolor: "#1e293b", borderRadius: 2 }}>
-                <Typography variant="h5" fontWeight="bold" sx={{ color: "#e2e8f0" }}>Company Info</Typography>
-                <Typography>Industry: {stockData.industry}</Typography>
-                <Typography>Sector: {stockData.sector}</Typography>
-                {stockData.fullTimeEmployees && <Typography>Employees: {stockData.fullTimeEmployees}</Typography>}
-                {stockData.phone && <Typography>Contact: {stockData.phone}</Typography>}
-                {stockData.website && (
-                  <Typography>
-                    Website: <a href={stockData.website} target="_blank" rel="noopener noreferrer">{stockData.website}</a>
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
-        )}
-
-        {/* ✅ Add Stock Chart Here */}
         <Box sx={{ mt: 4 }}>
           <StockChart stockCode={stockCode} />
         </Box>

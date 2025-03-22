@@ -1,6 +1,6 @@
 import React from "react";
 import { AppBar, Toolbar, Typography, Box } from "@mui/material";
-import { useLocation } from "react-router-dom"; // Import useLocation
+import { Link, useLocation } from "react-router-dom"; // ✅ Import Link & useLocation
 import StockSearch from "./StockSearch"; // Import the search component
 
 const Navbar = () => {
@@ -18,10 +18,12 @@ const Navbar = () => {
         >
             <Toolbar sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 
-                {/* Logo */}
-                <Typography variant="h6" sx={{ fontWeight: "bold", color: "#4CAF50" }}>
-                    StockSage
-                </Typography>
+                {/* ✅ Clickable Logo to go to Home */}
+                <Link to="/" style={{ textDecoration: "none" }}>
+                    <Typography variant="h6" sx={{ fontWeight: "bold", color: "#4CAF50", cursor: "pointer" }}>
+                        StockSage
+                    </Typography>
+                </Link>
 
                 {/* ✅ Show search bar ONLY if NOT on the homepage */}
                 {location.pathname !== "/" && (

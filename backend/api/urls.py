@@ -4,13 +4,13 @@ from .views import (
     suggestions, 
     home, 
     get_random_stocks, 
-    get_historical_data  # Import the new view
+    get_historical_data,  # Import the historical data view
 )
 
 urlpatterns = [
     path("home/", home, name="home"),
     path("stock/<str:security_id>/", get_stock_info, name="get_stock_info"),  
-    path("stock/<str:security_id>/history/", get_historical_data, name="get_historical_data"),  # New route
+    path("stock/<str:security_id>/history/", get_historical_data, name="get_historical_data"),  # Historical data
     path("suggestions/", suggestions, name="stock_suggestions"),
     path("random-stocks/", get_random_stocks, name="random_stocks"),
 ]

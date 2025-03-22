@@ -1,179 +1,169 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
-  LineChart,
+  ResponsiveContainer,
+  ComposedChart,
   Line,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   CartesianGrid,
-  BarChart,
   Bar,
-  ComposedChart
 } from "recharts";
 import {
   ToggleButton,
   ToggleButtonGroup,
   Box,
-  Typography
+  Typography,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
-import { format, subYears, subMonths, parse } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 const StockChart = ({ stockCode }) => {
   const [data, setData] = useState([]);
-  const [years, setYears] = useState("10");
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const [timeframe, setTimeframe] = useState("1Y");
+  const [showVolume, setShowVolume] = useState(true);
+  const [tickValues, setTickValues] = useState([]);
+
+  const API_BASE_URL = "http://192.168.29.94:8000/api";
 
   useEffect(() => {
     fetchData();
-  }, [years]);
+  }, [stockCode, timeframe]);
 
   const fetchData = async () => {
-    let computedStartDate = "";
-    switch (years) {
-      case "0.08": computedStartDate = format(subMonths(new Date(), 1), "yyyy-MM-dd"); break;
-      case "0.5": computedStartDate = format(subMonths(new Date(), 6), "yyyy-MM-dd"); break;
-      case "1": computedStartDate = format(subYears(new Date(), 1), "yyyy-MM-dd"); break;
-      case "3": computedStartDate = format(subYears(new Date(), 3), "yyyy-MM-dd"); break;
-      case "5": computedStartDate = format(subYears(new Date(), 5), "yyyy-MM-dd"); break;
-      case "10": computedStartDate = format(subYears(new Date(), 10), "yyyy-MM-dd"); break;
-      default: computedStartDate = format(subYears(new Date(), 10), "yyyy-MM-dd");
-    }
-
-    let url = `${API_BASE_URL}/stock/${stockCode}/history/?start_date=${computedStartDate}&end_date=${format(new Date(), "yyyy-MM-dd")}`;
-
     try {
+      const url = `${API_BASE_URL}/stock/${stockCode}/history/?timeframe=${timeframe}`;
       const response = await axios.get(url);
       if (response.data.success) {
-        setData(response.data.nse_data);
+        let stockData = response.data.nse_data || response.data.bse_data || [];
+        setData(stockData);
+        updateTickValues(stockData);
       }
     } catch (error) {
       console.error("Error fetching historical data:", error);
     }
   };
 
-  // Format X-axis to show only 7 points with "Month Year" format
-  const formatXAxis = (tickItem, index) => {
-    if (data.length === 0) return "";
-    
-    // Display only 7 evenly spaced dates
-    const interval = Math.floor(data.length / 7);
-    if (index % interval === 0 || index === data.length - 1) {
-      const parsedDate = parse(tickItem, "yyyy-MM-dd", new Date());
-      return format(parsedDate, "MMM yyyy");
-    }
-    
-    return "";
+  const updateTickValues = (data) => {
+    if (data.length === 0) return setTickValues([]);
+    const totalTicks = 5;
+    const step = Math.floor(data.length / (totalTicks - 1));
+    const selectedTicks = Array.from({ length: totalTicks }, (_, i) =>
+      data[Math.min(i * step, data.length - 1)].Date
+    );
+    setTickValues(selectedTicks);
   };
 
+  const formatXAxis = (tick) => format(parseISO(tick), "MMM yyyy");
+
   return (
-    <Box sx={{ textAlign: "center", padding: 3, bgcolor: "#121212", borderRadius: 2, color: "#fff" }}>
-      <Typography variant="h5" sx={{ marginBottom: 2, fontWeight: "bold", color: "#fff" }}>
+    <Box sx={{ textAlign: "center", padding: 3, bgcolor: "#ffffff", borderRadius: 2, color: "#333", boxShadow: 2 }}>
+      <Typography variant="h6" sx={{ fontWeight: "bold", color: "#222", marginBottom: 2 }}>
         Stock Price Chart ({stockCode})
       </Typography>
 
       {/* Timeframe Selector */}
       <ToggleButtonGroup
-        value={years}
+        value={timeframe}
         exclusive
-        onChange={(event, newValue) => {
-          if (newValue !== null) setYears(newValue);
-        }}
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          borderRadius: 2,
-          marginBottom: 2,
-          bgcolor: "#1E1E1E"
-        }}
+        onChange={(event, newValue) => newValue && setTimeframe(newValue)}
+        sx={{ display: "flex", justifyContent: "center", marginBottom: 2 }}
       >
-        {[
-          { label: "1M", value: "0.08" },
-          { label: "6M", value: "0.5" },
-          { label: "1Yr", value: "1" },
-          { label: "3Yr", value: "3" },
-          { label: "5Yr", value: "5" },
-          { label: "10Yr", value: "10" },
-        ].map((option) => (
+        {["1M", "6M", "1Y", "3Y", "5Y", "10Y", "MAX"].map((option) => (
           <ToggleButton
-            key={option.value}
-            value={option.value}
+            key={option}
+            value={option}
             sx={{
-              borderRadius: 1,
               textTransform: "none",
               fontSize: "14px",
               fontWeight: "bold",
-              color: "#fff",
-              "&.Mui-selected": {
-                bgcolor: "#3b82f6",
-                color: "#fff",
-              },
+              color: "#555",
+              "&.Mui-selected": { bgcolor: "#3b82f6", color: "#fff" },
             }}
           >
-            {option.label}
+            {option}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
 
-      {/* Stock Chart */}
-      <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" opacity={0.4} />
-          <XAxis
-            dataKey="Date"
-            tickFormatter={formatXAxis}
-            tick={{ fill: "#ddd", fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            yAxisId="left"
-            orientation="left"
-            tick={{ fill: "#ddd", fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-            label={{
-              value: "Volume",
-              angle: -90,
-              position: "insideLeft",
-              fill: "#ddd",
-              fontSize: 14,
-            }}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            tick={{ fill: "#ddd", fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-            label={{
-              value: "Price (₹)",
-              angle: -90,
-              position: "insideRight",
-              fill: "#ddd",
-              fontSize: 14,
-            }}
-          />
-          <Tooltip
-            content={({ label, payload }) => {
-              if (!payload || payload.length === 0) return null;
-              return (
-                <div style={{ backgroundColor: "#222", padding: "8px", borderRadius: "8px", color: "#fff" }}>
-                  <p style={{ fontWeight: "bold", marginBottom: "5px" }}>{label}</p>
-                  {payload.map((entry, index) => (
-                    <p key={index} style={{ color: entry.color }}>
-                      {entry.dataKey === "Close" ? `₹ ${entry.value.toFixed(2)}` : `Volume: ${entry.value.toLocaleString()}`}
-                    </p>
-                  ))}
-                </div>
-              );
-            }}
-          />
-          <Bar yAxisId="left" dataKey="Volume" fill="#4C82F7" opacity={0.3} name="Volume" />
-          <Line yAxisId="right" type="monotone" dataKey="Close" stroke="#FBC02D" strokeWidth={2} dot={false} name="Price (₹)" />
-        </ComposedChart>
-      </ResponsiveContainer>
+      {/* Checkbox for Volume */}
+      <Box sx={{ display: "flex", justifyContent: "center", gap: 2, marginBottom: 2 }}>
+        <FormControlLabel control={<Checkbox checked={showVolume} onChange={() => setShowVolume(!showVolume)} />} label="Volume" />
+      </Box>
+
+      {/* Chart Container with Labels Outside the Graph */}
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Left Label (Volume) */}
+        <Typography sx={{ transform: "rotate(-90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginRight: 1 }}>
+          Volume
+        </Typography>
+
+        <ResponsiveContainer width="90%" height={500}>
+          <ComposedChart data={data}>
+            {/* Grid Lines */}
+            <CartesianGrid stroke="#aaa" strokeWidth={1} opacity={0.8} vertical={false} />
+
+            {/* X-Axis */}
+            <XAxis
+              dataKey="Date"
+              ticks={tickValues}
+              tickFormatter={formatXAxis}
+              tick={{ fill: "#777", fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: "#ddd" }}
+            />
+
+            {/* Y-Axis (Left - Volume) */}
+            {showVolume && (
+              <YAxis
+                yAxisId="left"
+                orientation="left"
+                tick={{ fill: "#777", fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+            )}
+
+            {/* Y-Axis (Right - Price) */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              tick={{ fill: "#777", fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+            />
+
+            {/* Tooltip */}
+            <Tooltip
+              content={({ label, payload }) =>
+                payload?.length ? (
+                  <div style={{ backgroundColor: "#fff", padding: "10px", borderRadius: "6px", boxShadow: "0px 2px 10px rgba(0,0,0,0.1)", border: "1px solid #ddd" }}>
+                    <p style={{ fontWeight: "bold", marginBottom: "5px", color: "#444" }}>{label}</p>
+                    {payload.map((entry, index) => (
+                      <p key={index} style={{ color: entry.color }}>
+                        {entry.dataKey === "Close" ? `₹ ${entry.value.toFixed(2)}` : `Vol: ${entry.value.toLocaleString()}`}
+                      </p>
+                    ))}
+                  </div>
+                ) : null
+              }
+            />
+
+            {/* Volume Bars */}
+            {showVolume && <Bar yAxisId="left" dataKey="Volume" fill="#4C82F7" opacity={0.15} name="Volume" barSize={4} />}
+
+            {/* Price Line */}
+            <Line yAxisId="right" type="monotone" dataKey="Close" stroke="#4C82F7" strokeWidth={2} dot={false} name="Price (₹)" />
+          </ComposedChart>
+        </ResponsiveContainer>
+
+        {/* Right Label (Price) */}
+        <Typography sx={{ transform: "rotate(90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginLeft: 1 }}>
+          Price (₹)
+        </Typography>
+      </Box>
     </Box>
   );
 };
