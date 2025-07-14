@@ -46,3 +46,46 @@ webencodings==0.5.1
 websocket-client==1.8.0
 wheel==0.45.1
 wsproto==1.2.0
+django_extensions
+# Core Data and ML Libraries
+
+numpy
+pandas
+scikit-learn
+xgboost
+joblib
+
+# Deep Learning
+tensorflow
+keras
+
+# Data Retrieval & APIs
+yfinance
+pandas_datareader
+nsetools
+requests
+
+# Visualization
+matplotlib
+streamlit
+
+# LLM and Transformers
+google-generativeai
+transformers
+torch
+
+# Web Scraping (if needed later)
+beautifulsoup4
+lxml
+
+# Orchestration (if pipelines implemented)
+apache-airflow
+
+# Monitoring (optional, for production)
+prometheus-client
+
+# For loading .env secrets (optional good practice)
+python-dotenv
+
+# Others
+tqdm
