@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { TextField, Autocomplete, IconButton, Box } from "@mui/material";
+import {
+  TextField,
+  Autocomplete,
+  IconButton,
+  Box,
+  CircularProgress,
+} from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
 const StockSearch = ({ isNavbar = false }) => {
   const [stockName, setStockName] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-const API_BASE_URL = "http://192.168.29.94:8000/api";
-  // ✅ Use network IP
+  const API_BASE_URL = "http://127.0.0.1:8000/api";
 
   const fetchSuggestions = async (query) => {
     if (!query) {
@@ -17,12 +23,19 @@ const API_BASE_URL = "http://192.168.29.94:8000/api";
       return;
     }
     try {
-      const response = await axios.get(`${API_BASE_URL}/suggestions/?q=${query}`);
+      setLoading(true);
+      const response = await axios.get(
+        `${API_BASE_URL}/suggestions/?q=${encodeURIComponent(query)}`
+      );
       if (response.data.success) {
         setSuggestions(response.data.data);
+      } else {
+        setSuggestions([]);
       }
-    } catch (err) {
-      console.error("Error fetching stock suggestions:", err);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,40 +52,61 @@ const API_BASE_URL = "http://192.168.29.94:8000/api";
         alignItems: "center",
         backgroundColor: "white",
         borderRadius: "24px",
-        padding: "8px 12px", // Increased padding for better look
-        width: isNavbar ? "400px" : "700px", // Shorter width in navbar, wider in main
+        padding: "8px 12px",
+        width: isNavbar ? "400px" : "700px",
         maxWidth: "90%",
-        height:isNavbar? "45px": "60px", // Increased height for better visibility
+        height: isNavbar ? "45px" : "60px",
         boxShadow: isNavbar ? "none" : "0px 2px 6px rgba(0,0,0,0.2)",
         border: "1px solid #ccc",
+        zIndex: 1302,
       }}
     >
       <Autocomplete
         freeSolo
+        disablePortal
+        autoHighlight
+        autoSelect
         options={suggestions}
-        getOptionLabel={(option) => option.name}
-        onInputChange={(event, newValue) => {
-          setStockName(newValue);
-          fetchSuggestions(newValue);
+        value={stockName}
+        getOptionLabel={(option) =>
+          typeof option === "string" ? option : option.name || ""
+        }
+        loading={loading}
+        onInputChange={(event, newValue, reason) => {
+          if (reason === "input") {
+            setStockName(newValue);
+            fetchSuggestions(newValue);
+          }
         }}
         onChange={(event, newValue) => {
           if (newValue) {
-            handleSearch(newValue.ticker);
+            if (typeof newValue === "string") {
+              setStockName(newValue);
+              fetchSuggestions(newValue);
+            } else {
+              setStockName(newValue.name);
+              handleSearch(newValue.ticker);
+            }
           }
         }}
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder="Search..."
+            placeholder="Search for stocks..."
             variant="standard"
             InputProps={{
               ...params.InputProps,
               disableUnderline: true,
+              endAdornment: (
+                <>
+                  {loading && <CircularProgress color="inherit" size={16} />}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
               style: {
                 fontSize: "16px",
-                width: "100%",
-                padding: "10px", // More padding for spacing
-                height: "100%", // Ensure it fills the box height
+                padding: "10px",
+                height: "100%",
               },
             }}
             onKeyDown={(event) => {
@@ -84,7 +118,11 @@ const API_BASE_URL = "http://192.168.29.94:8000/api";
         )}
         sx={{ width: "100%" }}
       />
-      <IconButton onClick={() => handleSearch(stockName)} disabled={!stockName} sx={{ color: "black" }}>
+      <IconButton
+        onClick={() => handleSearch(stockName)}
+        disabled={!stockName}
+        sx={{ color: "black" }}
+      >
         <SearchIcon />
       </IconButton>
     </Box>

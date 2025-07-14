@@ -26,7 +26,7 @@ const StockChart = ({ stockCode }) => {
   const [showVolume, setShowVolume] = useState(true);
   const [tickValues, setTickValues] = useState([]);
 
-  const API_BASE_URL = "http://192.168.29.94:8000/api";
+  const API_BASE_URL = "http://127.0.0.1:8000/api";
 
   useEffect(() => {
     fetchData();
@@ -36,10 +36,25 @@ const StockChart = ({ stockCode }) => {
     try {
       const url = `${API_BASE_URL}/stock/${stockCode}/history/?timeframe=${timeframe}`;
       const response = await axios.get(url);
+      console.log("Chart API Response:", response.data);
+
       if (response.data.success) {
-        let stockData = response.data.nse_data || response.data.bse_data || [];
+        let stockData = response.data.data || [];
+
+        // Clean and normalize data
+        stockData = stockData
+          .map((item) => ({
+            Date: item.Date,
+            Close: parseFloat(item.Close),
+            Volume: parseFloat(item.Volume),
+          }))
+          .filter((item) => item.Date && !isNaN(item.Close));
+
         setData(stockData);
         updateTickValues(stockData);
+      } else {
+        setData([]);
+        console.warn("API returned success: false");
       }
     } catch (error) {
       console.error("Error fetching historical data:", error);
@@ -93,19 +108,19 @@ const StockChart = ({ stockCode }) => {
         <FormControlLabel control={<Checkbox checked={showVolume} onChange={() => setShowVolume(!showVolume)} />} label="Volume" />
       </Box>
 
-      {/* Chart Container with Labels Outside the Graph */}
+      {/* Chart Container */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* Left Label (Volume) */}
-        <Typography sx={{ transform: "rotate(-90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginRight: 1 }}>
-          Volume
-        </Typography>
+        {/* Left Y-Axis Label */}
+        {showVolume && (
+          <Typography sx={{ transform: "rotate(-90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginRight: 1 }}>
+            Volume
+          </Typography>
+        )}
 
         <ResponsiveContainer width="90%" height={500}>
           <ComposedChart data={data}>
-            {/* Grid Lines */}
             <CartesianGrid stroke="#aaa" strokeWidth={1} opacity={0.8} vertical={false} />
 
-            {/* X-Axis */}
             <XAxis
               dataKey="Date"
               ticks={tickValues}
@@ -115,7 +130,6 @@ const StockChart = ({ stockCode }) => {
               axisLine={{ stroke: "#ddd" }}
             />
 
-            {/* Y-Axis (Left - Volume) */}
             {showVolume && (
               <YAxis
                 yAxisId="left"
@@ -126,7 +140,6 @@ const StockChart = ({ stockCode }) => {
               />
             )}
 
-            {/* Y-Axis (Right - Price) */}
             <YAxis
               yAxisId="right"
               orientation="right"
@@ -135,7 +148,6 @@ const StockChart = ({ stockCode }) => {
               axisLine={false}
             />
 
-            {/* Tooltip */}
             <Tooltip
               content={({ label, payload }) =>
                 payload?.length ? (
@@ -151,15 +163,12 @@ const StockChart = ({ stockCode }) => {
               }
             />
 
-            {/* Volume Bars */}
             {showVolume && <Bar yAxisId="left" dataKey="Volume" fill="#4C82F7" opacity={0.15} name="Volume" barSize={4} />}
-
-            {/* Price Line */}
             <Line yAxisId="right" type="monotone" dataKey="Close" stroke="#4C82F7" strokeWidth={2} dot={false} name="Price (₹)" />
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* Right Label (Price) */}
+        {/* Right Y-Axis Label */}
         <Typography sx={{ transform: "rotate(90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginLeft: 1 }}>
           Price (₹)
         </Typography>
