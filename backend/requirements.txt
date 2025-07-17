@@ -160,7 +160,7 @@ nltk==3.9.1
 nselib==1.6
 nsepy==0.8
 nsetools==2.0.1
-numba==0.57.1
+numba==0.61.2
 nvidia-cublas-cu12==12.6.4.1
 nvidia-cuda-cupti-cu12==12.6.80
 nvidia-cuda-nvrtc-cu12==12.6.77
