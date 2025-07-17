@@ -351,65 +351,63 @@ def get_current_price(symbol):
     else:
         return None
 
-# Example usage
-current_price = get_current_price("TATAMOTORS")
-print(f"Current live price for TATAMOTORS: ₹{current_price}")
-
 @api_view(["GET"])
 def stock_analysis_view(request, stock_name):
     """
-    Analyze stock using multiple Gemini models and summarize the best decision.
+    Analyze stock using Gemini model, summarizing best decision including real-time price and latest news.
     """
     try:
-        prompt = f"""You are a financial sentiment analysis model. Analyze the following stock data and provide a clear, concise, and professional assessment for traders and investors.
+        # Fetch stock object
+        stock = get_object_or_404(Stock, security_id=stock_name.upper())
 
-**Stock:** {stock_name}
+        # ✅ Fetch real-time price
+        price, price_source, updated_time = fetch_real_time_price(stock.security_id, stock.code)
+        price_text = f"₹{price}" if price is not None else "Unavailable"
 
-**Current Live Price:** ₹{{current_price}}
-**Predicted Price (Next Day):** ₹{{predicted_price}}
-**Predicted Return:** {{predicted_return}}
-**Probability of Upward Movement:** {{probability_up}}
+        # ✅ Fetch latest news headlines (using your get_stock_news logic directly here)
+        SERPAPI_KEY = "5f9caf868363cac1080e4f99576ce05edb4632548b7ae0c0fa0b952c18e1baba"
+        query = f"{stock_name} Indian stock Market"
+        news_url = f"https://serpapi.com/search.json?engine=google_news&q={query}&api_key={SERPAPI_KEY}"
+        news_response = requests.get(news_url).json()
 
-**Recent News Highlights:** 
-- JLR reports strong Q4 results, exceeding expectations due to increased demand for luxury vehicles and effective cost management.
-- Tata Motors announces new partnerships to accelerate its EV development program.
-- Concerns remain regarding the company's debt levels and the impact of rising raw material costs on profitability.
+        # Extract top 5 news headlines
+        news_items = []
+        if "news_results" in news_response:
+            for news in news_response["news_results"][:5]:
+                title = news['title']
+                snippet = news.get('snippet', '')
+                news_items.append(f"- {title}: {snippet}")
 
-### Please provide:
+        news_text = "\n".join(news_items) if news_items else "No major news found."
 
-1. **Overall Sentiment:** (e.g. Strongly Bullish, Slightly Bullish, Neutral, Slightly Bearish, Strongly Bearish)
-2. **Summary Reasoning:** Summarize the impact of the above data points in under 100 words.
-3. **Actionable Insight:** Should investors buy, hold, or sell this stock tomorrow?
-
-Respond concisely and clearly for display in an executive dashboard.
-"""
-        
-
-        # Get responses from both analysis models
-        response_flash = gemini_models["flash"].generate_content(prompt)
-        
-
-        analysis_flash = response_flash.text if response_flash else "No response from Flash model."
-        #analysis_flash_lite = response_flash_lite.text if response_flash_lite else "No response from Flash Lite model."
-       
-        # Combine both responses for Ultra summarization
-        combined_analysis = f"Model 1 (Flash): {analysis_flash}"
-
-        # Use Gemini Ultra to summarize and choose the best decision
+        # 🔑 Build Gemini prompt with price & news
         summarization_prompt = f"""
-        Given these three analyses, summarize the insights and choose the best BUY/SELL recommendation.
-	And don't use model,etc words please and don't use both models or anything because we have to show only one summary and the best one you choose
-        Ensure you provide:
+        Analyze the stock {stock_name} with the current real-time price of {price_text}.
+        don't give any disclaimer.
+        
+        Recent News:
+        {news_text}
+
+        Provide:
         - A clear BUY/SELL decision for both Short-Term and Long-Term.
+        - Trading Levels
         - The strongest 5 pros and 5 cons.
-        - Keep it structured, accurate, and concise.
-        Here is the analysis:\n\n{combined_analysis}
+        
+        - Structured, professional, actionable summary (no mention of models or internal prompts).
+	- i don't want these types or anything like this in results (Okay, here's an analysis of WSFX Global Pay (currently at ₹69.1), based on the provided information. Note that this analysis is based solely on the limited information you've provided and does not constitute comprehensive financial advice. Always conduct your own thorough research before making investment decisions.)
+	- Sequence of the results should be (Summary, Trading Levels, Some News, pros and cons)
         """
-        response_ultra = gemini_models["flash"].generate_content(summarization_prompt)
-        final_summary = response_ultra.text if response_ultra else "No summary available."
+
+        # 🔥 Call Gemini for summarization
+        response_flash = gemini_models["flash"].generate_content(summarization_prompt)
+        final_summary = response_flash.text if response_flash else "No summary available."
 
         return Response({
             "stock": stock_name,
+            "real_time_price": price_text,
+            "price_source": price_source,
+            "updated_time": updated_time,
+            "news_headlines": news_items,
             "summary": final_summary
         })
 
