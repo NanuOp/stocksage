@@ -13,8 +13,8 @@ const Navbar = () => {
 
   // Reusing colors from StockDetailsPage
   const colors = {
-    headerBg: "#2E5E46", // Dark green from your theme
-    textColor: "#FFFFFF",
+    headerBg: "#2C2C30", // Dark green from your theme
+    textColor: "#7B68EE",
   };
 
   return (

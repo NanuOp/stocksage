@@ -20,13 +20,32 @@ import {
 } from "@mui/material";
 import { format, parseISO } from "date-fns";
 
-const StockChart = ({ stockCode }) => {
+const StockChart = ({ stockCode, chartBg }) => { // Accept chartBg prop
   const [data, setData] = useState([]);
   const [timeframe, setTimeframe] = useState("1Y");
   const [showVolume, setShowVolume] = useState(true);
   const [tickValues, setTickValues] = useState([]);
 
   const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+  // Define dark theme colors for the chart
+  const darkChartColors = {
+    background: chartBg || "#1A1A1D", // Use prop, fallback to default dark
+    gridStroke: "#404045", // Darker grey for grid lines
+    axisText: "#A0A0A0",   // Medium grey for axis labels
+    axisLine: "#404045",   // Darker grey for axis lines
+    lineStroke: "#6A5ACD", // Accent color for the price line
+    barFill: "#6A5ACD",    // Accent color for volume bars
+    tooltipBg: "#2C2C30",  // Darker background for tooltip
+    tooltipBorder: "#6A5ACD", // Accent border for tooltip
+    tooltipTextPrimary: "#E0E0E0", // Light text for tooltip primary
+    tooltipTextSecondary: "#A0A0A0", // Medium text for tooltip secondary
+    toggleButtonActiveBg: "#6A5ACD", // Active toggle button background
+    toggleButtonActiveText: "#E0E0E0", // Active toggle button text
+    toggleButtonInactiveBg: "#2C2C30", // Inactive toggle button background
+    toggleButtonInactiveText: "#A0A0A0", // Inactive toggle button text
+    labelColor: "#E0E0E0", // Color for "Volume" and "Price (₹)" labels
+  };
 
   useEffect(() => {
     fetchData();
@@ -74,67 +93,53 @@ const StockChart = ({ stockCode }) => {
   const formatXAxis = (tick) => format(parseISO(tick), "MMM yyyy");
 
   return (
-    <Box sx={{ textAlign: "center", padding: 3, bgcolor: "#ffffff", borderRadius: 2, color: "#333", boxShadow: 2 }}>
-      <Typography variant="h6" sx={{ fontWeight: "bold", color: "#222", marginBottom: 2 }}>
-        Stock Price Chart ({stockCode})
+    <Box sx={{ 
+      textAlign: "center", 
+      padding: 3, 
+      bgcolor: darkChartColors.background, // Apply background color here
+      borderRadius: 2, // Changed to 0 for classical look
+      color: darkChartColors.textPrimary, // Default text color for the chart box
+      boxShadow: 0, // Changed to 0 for classical look
+      border: `1px solid ${darkChartColors.divider}` // Added border for classical look
+    }}>
+      <Typography variant="h6" fontWeight="bold" sx={{ color: darkChartColors.textPrimary, marginBottom: 2 }}>
+        Price Chart ({stockCode})
       </Typography>
-
-      {/* Timeframe Selector */}
-      <ToggleButtonGroup
-        value={timeframe}
-        exclusive
-        onChange={(event, newValue) => newValue && setTimeframe(newValue)}
-        sx={{ display: "flex", justifyContent: "center", marginBottom: 2 }}
-      >
-        {["1M", "6M", "1Y", "3Y", "5Y", "10Y", "MAX"].map((option) => (
-          <ToggleButton
-            key={option}
-            value={option}
-            sx={{
-              textTransform: "none",
-              fontSize: "14px",
-              fontWeight: "bold",
-              color: "#555",
-              "&.Mui-selected": { bgcolor: "#3b82f6", color: "#fff" },
-            }}
-          >
-            {option}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
-
-      {/* Checkbox for Volume */}
-      <Box sx={{ display: "flex", justifyContent: "center", gap: 2, marginBottom: 2 }}>
-        <FormControlLabel control={<Checkbox checked={showVolume} onChange={() => setShowVolume(!showVolume)} />} label="Volume" />
-      </Box>
 
       {/* Chart Container */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         {/* Left Y-Axis Label */}
         {showVolume && (
-          <Typography sx={{ transform: "rotate(-90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginRight: 1 }}>
+          <Typography sx={{ 
+            transform: "rotate(-90deg)", 
+            whiteSpace: "nowrap", 
+            fontSize: 20, 
+            fontWeight: "bold", 
+            color: darkChartColors.labelColor, 
+            marginRight: 1 
+          }}>
             Volume
           </Typography>
         )}
 
         <ResponsiveContainer width="90%" height={500}>
-          <ComposedChart data={data}>
-            <CartesianGrid stroke="#aaa" strokeWidth={1} opacity={0.8} vertical={false} />
+          <ComposedChart data={data} style={{ background: darkChartColors.background }}> {/* Apply background here too */}
+            <CartesianGrid stroke={darkChartColors.gridStroke} strokeWidth={1} opacity={0.8} vertical={false} />
 
             <XAxis
               dataKey="Date"
               ticks={tickValues}
               tickFormatter={formatXAxis}
-              tick={{ fill: "#777", fontSize: 12 }}
+              tick={{ fill: darkChartColors.axisText, fontSize: 12 }}
               tickLine={false}
-              axisLine={{ stroke: "#ddd" }}
+              axisLine={{ stroke: darkChartColors.axisLine }}
             />
 
             {showVolume && (
               <YAxis
                 yAxisId="left"
                 orientation="left"
-                tick={{ fill: "#777", fontSize: 12 }}
+                tick={{ fill: darkChartColors.axisText, fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -143,7 +148,7 @@ const StockChart = ({ stockCode }) => {
             <YAxis
               yAxisId="right"
               orientation="right"
-              tick={{ fill: "#777", fontSize: 12 }}
+              tick={{ fill: darkChartColors.axisText, fontSize: 12 }}
               tickLine={false}
               axisLine={false}
             />
@@ -151,10 +156,16 @@ const StockChart = ({ stockCode }) => {
             <Tooltip
               content={({ label, payload }) =>
                 payload?.length ? (
-                  <div style={{ backgroundColor: "#fff", padding: "10px", borderRadius: "6px", boxShadow: "0px 2px 10px rgba(0,0,0,0.1)", border: "1px solid #ddd" }}>
-                    <p style={{ fontWeight: "bold", marginBottom: "5px", color: "#444" }}>{label}</p>
+                  <div style={{ 
+                    backgroundColor: darkChartColors.tooltipBg, 
+                    padding: "10px", 
+                    borderRadius: "6px", 
+                    boxShadow: "0px 2px 10px rgba(0,0,0,0.3)", 
+                    border: `1px solid ${darkChartColors.tooltipBorder}` 
+                  }}>
+                    <p style={{ fontWeight: "bold", marginBottom: "5px", color: darkChartColors.tooltipTextPrimary }}>{label}</p>
                     {payload.map((entry, index) => (
-                      <p key={index} style={{ color: entry.color }}>
+                      <p key={index} style={{ color: entry.color || darkChartColors.tooltipTextSecondary }}>
                         {entry.dataKey === "Close" ? `₹ ${entry.value.toFixed(2)}` : `Vol: ${entry.value.toLocaleString()}`}
                       </p>
                     ))}
@@ -163,15 +174,98 @@ const StockChart = ({ stockCode }) => {
               }
             />
 
-            {showVolume && <Bar yAxisId="left" dataKey="Volume" fill="#4C82F7" opacity={0.15} name="Volume" barSize={4} />}
-            <Line yAxisId="right" type="monotone" dataKey="Close" stroke="#4C82F7" strokeWidth={2} dot={false} name="Price (₹)" />
+            {showVolume && <Bar yAxisId="left" dataKey="Volume" fill={darkChartColors.barFill} opacity={0.15} name="Volume" barSize={4} />}
+            <Line yAxisId="right" type="monotone" dataKey="Close" stroke={darkChartColors.lineStroke} strokeWidth={2} dot={false} name="Price (₹)" />
           </ComposedChart>
         </ResponsiveContainer>
 
         {/* Right Y-Axis Label */}
-        <Typography sx={{ transform: "rotate(90deg)", whiteSpace: "nowrap", fontSize: 20, fontWeight: "bold", color: "#555", marginLeft: 1 }}>
+        <Typography sx={{ 
+          transform: "rotate(90deg)", 
+          whiteSpace: "nowrap", 
+          fontSize: 20, 
+          fontWeight: "bold", 
+          color: darkChartColors.labelColor, 
+          marginLeft: 1 
+        }}>
           Price (₹)
         </Typography>
+      </Box>
+
+      {/* Controls at bottom right */}
+      <Box sx={{ 
+        display: "flex", 
+        justifyContent: "flex-end", // Align to the right
+        alignItems: "center",     // Align items to center vertically for better alignment
+        gap: 2, 
+        marginTop: 2, // Add some top margin
+        flexWrap: 'wrap' // Allow wrapping on smaller screens
+      }}>
+        {/* Timeframe Selector */}
+        <ToggleButtonGroup
+          value={timeframe}
+          exclusive
+          onChange={(event, newValue) => newValue && setTimeframe(newValue)}
+          sx={{ 
+            display: "flex", 
+            flexWrap: 'wrap', // Allow buttons to wrap
+            justifyContent: "flex-end", // Align buttons to the right within their group
+            '& .MuiToggleButtonGroup-grouped': {
+              borderRadius: '0 !important', // Ensure no border radius on grouped items
+              border: `1px solid ${darkChartColors.gridStroke} !important`, // Ensure consistent border
+              margin: '0 !important', // Remove default margins between grouped buttons
+            }
+          }}
+        >
+          {["1D", "1W", "1M", "6M", "1Y", "3Y", "5Y", "MAX"].map((option) => (
+            <ToggleButton
+              key={option}
+              value={option}
+              sx={{
+                textTransform: "none",
+                fontSize: "12px", // Smaller font size for compact look
+                fontWeight: "bold",
+                color: darkChartColors.toggleButtonInactiveText,
+                bgcolor: darkChartColors.toggleButtonInactiveBg,
+                "&.Mui-selected": { 
+                  bgcolor: darkChartColors.toggleButtonActiveBg, 
+                  color: darkChartColors.toggleButtonActiveText,
+                  '&:hover': {
+                    bgcolor: darkChartColors.toggleButtonActiveBg, 
+                  }
+                },
+                "&:hover": {
+                  bgcolor: darkChartColors.toggleButtonInactiveBg, 
+                },
+                minWidth: '40px', // Ensure minimum width for buttons
+                padding: '4px 8px', // Adjust padding
+              }}
+            >
+              {option}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
+        {/* Checkbox for Volume */}
+        <FormControlLabel 
+          control={
+            <Checkbox 
+              checked={showVolume} 
+              onChange={() => setShowVolume(!showVolume)} 
+              sx={{ 
+                color: darkChartColors.axisText, 
+                padding: '4px' // Reduce padding for checkbox to align better
+              }} 
+            />
+          } 
+          label={
+            <Typography sx={{ color: darkChartColors.axisText, fontSize: "14px" }}>Volume</Typography> 
+          } 
+          sx={{ 
+            marginRight: 0, 
+            marginLeft: 1 // Add a small left margin to separate from buttons
+          }} 
+        />
       </Box>
     </Box>
   );

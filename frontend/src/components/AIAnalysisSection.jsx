@@ -3,12 +3,12 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { Box, Card, CardContent, Typography, Grid, CircularProgress, Chip, Button } from "@mui/material";
 
-const AIAnalysisSection = ({ stockCode }) => {
+const AIAnalysisSection = ({ stockCode, colors }) => { // Accept colors prop
   const [analysisData, setAnalysisData] = useState(null);
   const [parsedData, setParsedData] = useState({ pros: [], cons: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const API_BASE_URL = "http://localhost:8000/api";
 
   useEffect(() => {
     if (stockCode) fetchAnalysisData();
@@ -88,20 +88,24 @@ const AIAnalysisSection = ({ stockCode }) => {
 
   // Styles for hover effects
   const cardHoverStyle = {
-    transition: 'transform 0.3s, box-shadow 0.3s',
+    transition: 'transform 0.3s, box-shadow 0.3s, border 0.3s', // Added border to transition
     '&:hover': {
       transform: 'translateY(-5px)',
-      boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+      boxShadow: `0 8px 20px rgba(106, 90, 205, 0.3)`, // A more prominent shadow with accent color
+      backgroundColor: "#1A1A1D", // Keep the card background slightly lighter for distinction
+      border: `1px solid ${colors.headerAccent}` // Accent border on hover
     }
   };
 
   const listItemHoverStyle = {
-    transition: 'background-color 0.2s, transform 0.2s',
+    transition: 'background-color 0.2s, transform 0.2s, box-shadow 0.2s, border 0.2s',
     padding: '8px',
     borderRadius: '4px',
     '&:hover': {
-      backgroundColor: '#f5f5f5',
+      backgroundColor: "#1A1A1D", // This is #7B68EE
       transform: 'translateX(5px)',
+      boxShadow: `0 0 12px 3px rgba(123, 104, 238, 0.8)`, // A stronger glowing effect
+      border: `1px solid ${colors.textPrimary}` // A subtle light border for contrast
     }
   };
 
@@ -122,14 +126,27 @@ const AIAnalysisSection = ({ stockCode }) => {
     
     return <ReactMarkdown>{filteredSummary}</ReactMarkdown>;
   };
+  
 
   return (
-    <Card sx={{ borderRadius: 4, boxShadow: 3, mb: 3, overflow: "hidden" }}>
-      <Box sx={{ p: 2, bgcolor: "#6B46C1", color: "white" }}>
-        <Typography variant="h6" fontWeight="bold">STOCK ANALYSIS</Typography>
+    <Card sx={{ 
+      borderRadius: 0, // Changed to 0 for classical look
+      boxShadow: 0, // Changed to 0 for classical look
+      mb: 3, 
+      overflow: "hidden",
+      bgcolor: colors.background, // Main background for the AI Analysis Card
+      color: colors.textPrimary // Default text color for this section
+    }}>
+      {/* Removed the outer Box wrapping the title */}
+      <Box sx={{ 
+        p: 2, // Header text color
+        display: "flex",
+        alignItems: "center",
+        gap: 1
+      }}>
+        <Typography variant="h6" fontWeight="bold">ANALYSIS</Typography>
       </Box>
-
-      <CardContent sx={{ bgcolor: "#F7F5FF", p: 3 }}>
+      <CardContent sx={{ bgcolor: "#2C2C30", p: 3 }}>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
@@ -147,12 +164,12 @@ const AIAnalysisSection = ({ stockCode }) => {
         ) : (
           <>
             {/* Summary - now filtered to avoid duplication */}
-            <Typography variant="h6" fontWeight="bold" color="#6B46C1" gutterBottom>SUMMARY</Typography>
             <Card sx={{ 
               p: 2, 
-              bgcolor: "white", 
+              bgcolor: "#1A1A1D", 
               borderRadius: 2, 
               mb: 3,
+              color: "white",
               ...cardHoverStyle
             }}>
               {renderFilteredSummary()}
@@ -161,11 +178,12 @@ const AIAnalysisSection = ({ stockCode }) => {
             {/* Pros & Cons */}
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <Typography variant="h6" fontWeight="bold" color="#2E7D32" mb={2}>PROS</Typography>
+                <Typography variant="h6" fontWeight="bold" color="green" mb={2}>PROS</Typography>
                 <Card sx={{ 
-                  bgcolor: "white", 
+                  bgcolor: "#1A1A1D", 
                   p: 3, 
                   borderRadius: 2,
+                  color: "white",
                   ...cardHoverStyle
                 }}>
                   <ul style={{ margin: 0, paddingLeft: 24 }}>
@@ -190,9 +208,10 @@ const AIAnalysisSection = ({ stockCode }) => {
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" fontWeight="bold" color="#C62828" mb={2}>CONS</Typography>
                 <Card sx={{ 
-                  bgcolor: "white", 
+                  bgcolor: "#1A1A1D", 
                   p: 3, 
                   borderRadius: 2,
+                  color: "white",
                   ...cardHoverStyle
                 }}>
                   <ul style={{ margin: 0, paddingLeft: 24 }}>
