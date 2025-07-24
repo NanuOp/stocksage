@@ -154,11 +154,11 @@ const StockChart = ({ stockCode, chartBg }) => { // Accept chartBg prop
               content={({ label, payload }) =>
                 payload?.length ? (
                   <div style={{ 
-                    backgroundColor: darkChartColors.tooltipBg, 
+                    backgroundColor: "#1A1A1D", 
                     padding: "10px", 
                     borderRadius: "6px", 
                     boxShadow: "0px 2px 10px rgba(0,0,0,0.3)", 
-                    border: `1px solid ${darkChartColors.tooltipBorder}` 
+                    
                   }}>
                     <p style={{ fontWeight: "bold", marginBottom: "5px", color: darkChartColors.tooltipTextPrimary }}>{label}</p>
                     {payload.map((entry, index) => (
