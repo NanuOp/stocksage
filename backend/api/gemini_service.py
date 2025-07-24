@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os  
 
 # Load API Key
-GEMINI_API_KEY = "AIzaSyBND4e8aapz0MkEa2cX_aRl37kAY4DnBDI"  
+GEMINI_API_KEY = "#"  
 genai.configure(api_key=GEMINI_API_KEY)  
 
 def analyze_stock(stock_name):  

@@ -19,9 +19,23 @@ import requests
 from rest_framework.decorators import api_view # Make sure this is imported
 from rest_framework.response import Response   # Make sure this is imported
 from .models import Stock, Prediction
+import pandas_market_calendars as mcal
+from jugaad_data.nse import NSELive # Import NSELive
+from datetime import datetime
+from rest_framework import status
+from datetime import date, datetime # Import date and datetime
+from dateutil.relativedelta import relativedelta # Import relativedelta
+from nsetools import Nse
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import StockDB
+nse = Nse()
 
 # Configure the Gemini API
-GEMINI_API_KEY = "AIzaSyDmO0wg72Bx3BAS3XaxkKlBgrn6t9q3ISY"
+GEMINI_API_KEY = "#"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_models = {
     "flash": genai.GenerativeModel("gemini-2.0-flash"),
@@ -138,56 +152,66 @@ def fetch_real_time_price(ticker, stock_code):
 
     return None, None, "N/A"  # Return None if both attempts fail
 
+import requests
+from django.http import JsonResponse
+
+from django.http import JsonResponse
+import requests
+
 def get_stock_news(request, symbol):
     """
-    Fetch stock-specific news using SerpAPI (Google News)
+    Fetch stock-specific news using Marketaux API.
     """
-    SERPAPI_KEY = "5f9caf868363cac1080e4f99576ce05edb4632548b7ae0c0fa0b952c18e1baba"
-    
-    # Map symbols to proper search queries
+    api_token = "jcPHtzPtFX6Qzy8k20W6Oq6Z3yVTaFERHOjuNcQl"
+
+    # Map symbols to full company names for Marketaux search
     stock_queries = {
-        'TATAMOTORS': 'Tata Motors stock',
-        'INFY': 'Infosys stock',
-        'RELIANCE': 'Reliance Industries stock',
-        'HDFCBANK': 'HDFC Bank stock',
-        'TCS': 'TCS stock'
+        'TATAMOTORS': 'Tata Motors',
+        'INFY': 'Infosys',
+        'RELIANCE': 'Reliance Industries',
+        'HDFCBANK': 'HDFC Bank',
+        'TCS': 'TCS',
+        'SBIN': 'State Bank of India'
     }
-    
-    query = stock_queries.get(symbol, f"{symbol} Indian stock Market")
-    
+    company = stock_queries.get(symbol.upper(), symbol)
+
+    url = f"https://api.marketaux.com/v1/news/all?api_token={api_token}&filter_entities=true&language=en&search={company}"
+
     try:
-        url = f"https://serpapi.com/search.json?engine=google_news&q={query}&api_key={SERPAPI_KEY}"
         response = requests.get(url)
+        if response.status_code != 200:
+            return JsonResponse({
+                "success": False,
+                "error": f"Marketaux API error: {response.status_code}",
+                "message": response.text
+            })
+
         data = response.json()
 
+        # Format articles cleanly for React
         articles = []
-        if "news_results" in data:
-            for news in data["news_results"][:10]:  # Get top 10 news articles
-                # Additional filtering to ensure relevance
-                title = news['title'].lower()
-                if any(keyword in title for keyword in ['stock', 'share', 'price', 'market', 'invest', 'earning']):
-                    articles.append({
-                        'title': news['title'],
-                        'description': news.get('snippet', news['title']),
-                        'source': news['source']['name'],
-                        'publishedAt': news['date'],
-                        'url': news['link'],
-                        'urlToImage': news.get('thumbnail', '')
-                    })
+        for item in data.get("data", []):
+            articles.append({
+                "title": item.get("title"),
+                "description": item.get("description"),
+                "source": item.get("source"),
+                "publishedAt": item.get("published_at"),
+                "url": item.get("url"),
+                "urlToImage": item.get("image_url")
+            })
 
         return JsonResponse({
-            'success': True,
-            'symbol': symbol,
-            'articles': articles,
-            'totalResults': len(articles)
+            "success": True,
+            "symbol": symbol,
+            "articles": articles,
+            "totalResults": len(articles)
         })
 
     except Exception as e:
-        print(f"Error fetching news for {symbol}: {str(e)}")
         return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'message': "Failed to fetch news"
+            "success": False,
+            "error": str(e),
+            "message": "Failed to fetch news"
         })
 
 def get_stock_info(request, security_id):
@@ -195,15 +219,16 @@ def get_stock_info(request, security_id):
     Fetch stock data using yfinance & real-time price from Google Finance.
     """
     try:
-        stock = get_object_or_404(Stock, security_id=security_id.upper())
+        stock = Stock.objects.filter(security_id=security_id.upper()).first()
+        if not stock:
+            return JsonResponse({"success": False, "message": f"Stock with security ID {security_id} not found."}, status=404)
 
-        # Get real-time stock price and updated time
+        # Your existing logic fetching price info and stock_info dictionary here
         real_time_price, price_source, updated_time = fetch_real_time_price(stock.security_id, stock.code)
 
-        # Determine Yahoo Finance ticker suffix based on price source
+        # Set up ticker and get the info from yfinance
         ticker_suffix = ".NS" if price_source == "NSE" else ".BO" if price_source == "BSE" else None
         stock_info = {}
-
         if ticker_suffix:
             ticker_symbol = stock.security_id + ticker_suffix
             try:
@@ -212,27 +237,24 @@ def get_stock_info(request, security_id):
             except Exception as e:
                 print(f"Error fetching stock info from Yahoo Finance: {e}")
 
-        # Override real-time price with Google Finance price if available
         stock_info["realTimePrice"] = real_time_price if real_time_price else stock_info.get("regularMarketPrice", "N/A")
         stock_info["priceSource"] = price_source if price_source else "Yahoo Finance"
-
-        # Use the Google Finance timestamp for `updatedOn`
         stock_info["updatedOn"] = updated_time
 
-        # Calculate change and pChange
         previous_close = stock_info.get("previousClose", stock_info.get("regularMarketPreviousClose", "N/A"))
 
         if isinstance(real_time_price, (int, float)) and isinstance(previous_close, (int, float)) and previous_close > 0:
             change = real_time_price - previous_close
             pChange = (change / previous_close) * 100
-
             stock_info["change"] = f"{'+' if change > 0 else ''}{change:.2f}"
             stock_info["pChange"] = f"{'+' if pChange > 0 else ''}{pChange:.2f}%"
         else:
             stock_info["change"] = "N/A"
             stock_info["pChange"] = "N/A"
 
+        # **IMPORTANT:** return a valid response here
         return JsonResponse({"success": True, "data": stock_info}, json_dumps_params={'ensure_ascii': False})
+
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})
 
@@ -253,45 +275,48 @@ def get_random_stocks(request):
 def get_historical_data(request, security_id):
     """
     Fetch historical stock data from Yahoo Finance for NSE (`.NS`) and BSE (`.BO`).
-    Users can select:
-    - `1M`  (Last 1 Month)
-    - `6M`  (Last 6 Months)
-    - `1Y`  (Last 1 Year)
-    - `3Y`  (Last 3 Years)
-    - `5Y`  (Last 5 Years)
-    - `10Y` (Last 10 Years)
-    - `MAX` (All Available Data)
-    
-    If `.NS` fails, it will automatically check `.BO`.
     """
     try:
         stock = get_object_or_404(Stock, security_id=security_id.upper())
 
-        # Define NSE & BSE tickers
         ticker_ns = f"{security_id}.NS"
         ticker_bo = f"{security_id}.BO"
 
-        # Get user-selected timeframe
-        timeframe = request.GET.get("timeframe", "1Y").upper()  # Default: 1 Year
+        timeframe = request.GET.get("timeframe", "1Y").upper()
 
-        # Determine start_date based on selected timeframe
-        end_date = datetime.today().strftime("%Y-%m-%d")  # Default: Today
-        
+        end_date = datetime.today().strftime("%Y-%m-%d")
+
         timeframe_mapping = {
+            "1D": 1,
+            "1W": 7,
             "1M": 30,
             "6M": 182,
             "1Y": 365,
             "3Y": 3 * 365,
             "5Y": 5 * 365,
             "10Y": 10 * 365,
-            "MAX": None  # Special case
+            "MAX": None
         }
-        
+
         if timeframe not in timeframe_mapping:
             return JsonResponse({"success": False, "error": "Invalid timeframe selected."})
-            
+
         if timeframe == "MAX":
-            start_date = "1900-01-01"  # Fetch all available data
+            start_date = "1900-01-01"
+
+        elif timeframe == "1D":
+            nse = mcal.get_calendar('NSE')
+            schedule = nse.schedule.loc[
+                (datetime.today() - timedelta(days=7)).strftime('%Y-%m-%d'):
+                datetime.today().strftime('%Y-%m-%d')
+            ]
+            if not schedule.empty:
+                # Latest previous trading day
+                start_date = schedule.index[-1].strftime('%Y-%m-%d')
+            else:
+                # Fallback to previous weekday if no trading day found in last week
+                start_date = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+        
         else:
             days = timeframe_mapping[timeframe]
             start_date = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -306,6 +331,7 @@ def get_historical_data(request, security_id):
             return df.to_dict(orient="records")
 
         # Try fetching NSE (`.NS`) data first
+        	
         try:
             df_ns = yf.download(ticker_ns, start=start_date, end=end_date)
             if not df_ns.empty:
@@ -413,3 +439,189 @@ def stock_analysis_view(request, stock_name):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+
+
+@api_view(['GET'])
+def get_top_gainers(request):
+    from nsetools import Nse
+    nse = Nse()
+
+    try:
+        gainers_data = nse.get_top_gainers()
+        if not gainers_data:
+            return JsonResponse({'success': False, 'data': [], 'message': 'No gainers today.'})
+
+        gainers = []
+        for item in gainers_data:
+            gainers.append({
+                'symbol': item.get('symbol'),
+                'lastPrice': item.get('ltp'),
+                'pChange': item.get('perChange'),
+                'highPrice': item.get('dayHigh'),
+                'lowPrice': item.get('dayLow')
+            })
+
+        return JsonResponse({'success': True, 'data': gainers})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+@api_view(['GET'])
+def get_top_losers(request):
+    try:
+        losers = nse.get_top_losers()
+        data = [{
+            "symbol": l['symbol'],
+            "ltp": l['ltp'],
+            "perChange": l['perChange']
+        } for l in losers]
+        return Response({"success": True, "data": data})
+    except Exception as e:
+        return Response({"success": False, "error": str(e)})
+        
+@api_view(['GET'])
+def get_stock_financials(request):
+    symbol = request.GET.get('symbol')
+    if not symbol:
+        return Response({"success": False, "error": "Symbol query parameter is required."})
+
+    try:
+        ticker = yf.Ticker(symbol.upper())
+        financials = ticker.financials
+        balance_sheet = ticker.balance_sheet
+
+        if financials.empty or balance_sheet.empty:
+            return Response({"success": False, "error": "Financial data not available."})
+
+        latest_period = financials.columns[0]
+
+        # Safely extract revenue and profit
+        revenue = financials.loc['Total Revenue'][latest_period] if 'Total Revenue' in financials.index else None
+        profit = financials.loc['Net Income'][latest_period] if 'Net Income' in financials.index else None
+
+        # Safely extract assets
+        assets = balance_sheet.loc['Total Assets'][latest_period] if 'Total Assets' in balance_sheet.index else None
+
+        # Safely extract liabilities using known keys
+        liabilities = None
+        for liab_key in ['Total Liab', 'Total Liabilities', 'Total Debt']:
+            if liab_key in balance_sheet.index:
+                liabilities = balance_sheet.loc[liab_key][latest_period]
+                break
+
+        # Calculate net worth if both are available
+        net_worth = assets - liabilities if (assets is not None and liabilities is not None) else None
+
+        # Format large numbers for readability (convert to INR Crores)
+        def format_inr_crores(value):
+            if value is None:
+                return "N/A"
+            return f"₹{value / 1e7:,.2f} Cr"
+
+        data = {
+            "symbol": symbol.upper(),
+            "revenue": format_inr_crores(revenue),
+            "profit": format_inr_crores(profit),
+            "net_worth": format_inr_crores(net_worth)
+        }
+        return Response({"success": True, "data": data})
+
+    except Exception as e:
+        return Response({"success": False, "error": str(e)})
+        
+
+
+# In your Django app's views.py
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from jugaad_data.nse import NSELive
+from datetime import date, datetime # Import date and datetime
+from dateutil.relativedelta import relativedelta # Import relativedelta
+
+@api_view(['GET'])
+def get_stock_announcements(request, symbol):
+    """
+    Fetch recent corporate announcements for a given NSE stock symbol.
+    """
+    try:
+        today = date.today()
+        six_months_ago = today - relativedelta(months=6)
+        n = NSELive()
+
+        all_announcements = n.corporate_announcements(symbol=symbol)
+
+        filtered_announcements = []
+        for ann in all_announcements:
+            date_time_str = ann.get("an_dt", "")
+            if not date_time_str:
+                continue
+            try:
+                announcement_datetime = datetime.strptime(date_time_str, '%d-%b-%Y %H:%M:%S')
+                announcement_date = announcement_datetime.date()
+                if announcement_date >= six_months_ago:
+                    filtered_announcements.append({
+                        "date": date_time_str,
+                        "subject": ann.get("subject", ann.get("desc", "N/A")),
+                        "attachment": ann.get("attchmntFile", "N/A")
+                    })
+            except ValueError as e:
+                print(f"Could not parse date {date_time_str}: {e}")
+
+        # Sort by date, newest first
+        filtered_announcements.sort(
+            key=lambda x: datetime.strptime(x["date"], '%d-%b-%Y %H:%M:%S'),
+            reverse=True
+        )
+
+        return Response({
+            "success": True,
+            "symbol": symbol,
+            "total": len(filtered_announcements),
+            "announcements": filtered_announcements
+        })
+
+    except Exception as e:
+        return Response({"success": False, "error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_peers(request, security_id):
+    try:
+        stock = StockDB.objects.get(security_id=security_id)
+        industry = stock.industry
+        sector = stock.sector_index
+
+        peers_data = []
+
+        if industry:
+            peers = StockDB.objects.filter(industry=industry).exclude(security_id=security_id)
+            peers_data = [{
+                "security_id": peer.security_id,
+                "name": peer.name,
+                "industry": peer.industry
+            } for peer in peers]
+
+        # If no peers found by industry, fallback to sector_index
+        if not peers_data and sector:
+            peers = StockDB.objects.filter(sector_index=sector).exclude(security_id=security_id)
+            peers_data = [{
+                "security_id": peer.security_id,
+                "name": peer.name,
+                "sector_index": peer.sector_index
+            } for peer in peers]
+
+        return Response({
+            "success": True,
+            "security_id": security_id,
+            "industry": industry,
+            "sector_index": sector,
+            "peers": peers_data
+        })
+
+    except StockDB.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "Stock not found"
+        })

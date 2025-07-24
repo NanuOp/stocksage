@@ -24,3 +24,15 @@ class Prediction(models.Model):
 
     def __str__(self):
         return f"Pred for {self.stock.security_id} on {self.prediction_date}: {self.predicted_movement} ({self.probability_up:.2f})"
+
+class StockDB(models.Model):
+    id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=20, null=True)
+    name = models.CharField(max_length=255, null=True)
+    security_id = models.CharField(max_length=20, null=True)
+    industry = models.CharField(max_length=255, null=True)
+    sector_index = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        managed = False  # Do not create migrations
+        db_table = 'api_stock'  # Exact table name
