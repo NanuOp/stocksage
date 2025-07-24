@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useParams, useNavigate } from "react-router-dom"; // Corrected import: removed extra 'router-'
 import { 
   Container, Typography, Grid, Card, CardContent, Divider, 
   Box, IconButton, Button, CircularProgress, Tooltip // Import Tooltip
@@ -385,7 +385,7 @@ const StockDetailsPage = () => {
               px: 2, 
               mb: 1, 
               bgcolor: colors.cardBg, 
-              borderRadius: 2, // Classic look
+              borderRadius: 2, // Changed from 0 to 2
               boxShadow: 0, // Subtle shadow
               border: `1px solid ${colors.divider}`, // Add a border
               cursor: 'pointer', // Add cursor pointer
@@ -462,7 +462,7 @@ const StockDetailsPage = () => {
           mb: 4, 
           p: { xs: 2, sm: 3 }, 
           bgcolor: colors.background, 
-          borderRadius: 2, 
+          borderRadius: 2, // Changed from 0 to 2
         }}>
           <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: colors.textPrimary, fontSize: { xs: '2rem', sm: '3rem' } }}>
             {stockData.longName} ({stockData.symbol})
@@ -504,14 +504,12 @@ const StockDetailsPage = () => {
           <Grid item xs={12} md={8}> {/* Chart takes 8 of 12 columns on medium+ screens */}
             <Card sx={{ 
               p: { xs: 2, sm: 3 }, 
-              borderRadius: 2, 
+              borderRadius: 2, // Changed from 0 to 2
               bgcolor: colors.background, 
               boxShadow: 0, 
-              border: `1px solid ${colors.divider}`
+              
             }}> 
-              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ px: 0, mb: 1.5, color: colors.textPrimary }}>
-                Price Chart ({stockCode})
-              </Typography>
+              
               <StockChart stockCode={stockCode} chartBg={colors.background} /> 
             </Card>
           </Grid>
@@ -526,12 +524,12 @@ const StockDetailsPage = () => {
               mb: 3, // Add margin bottom to separate from gainers/losers
               overflow: "hidden",
               bgcolor: colors.cardBg, 
-              borderRadius: 2, 
+              borderRadius: 2, // Changed from 0 to 2
               boxShadow: 0, 
               border: `1px solid ${colors.divider}`,
               flexGrow: 1 // Allow this card to grow
             }}>
-              <CardContent sx={{ p: 3, borderRadius: 2, minHeight: 150 }}> {/* Added minHeight */}
+              <CardContent sx={{ p: 3, borderRadius: 2, minHeight: 150 }}> {/* Changed from 0 to 2 */}
                 {isLoadingPeers ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress sx={{ color: colors.headerAccent }} />
@@ -586,7 +584,7 @@ const StockDetailsPage = () => {
               mb: 3,
               overflow: "hidden",
               bgcolor: colors.cardBg, 
-              borderRadius: 2, 
+              borderRadius: 2, // Changed from 0 to 2
               boxShadow: 0, 
               border: `1px solid ${colors.divider}`,
               flexGrow: 1 // Allow this card to grow
@@ -660,7 +658,7 @@ const StockDetailsPage = () => {
           mb: 3, 
           p: { xs: 2, sm: 3 }, 
           bgcolor: colors.cardBg, 
-          borderRadius: 2, 
+          borderRadius: 2, // Changed from 0 to 2
           boxShadow: 0, 
           border: `1px solid ${colors.divider}` 
         }}>
@@ -669,7 +667,7 @@ const StockDetailsPage = () => {
           </Typography>
           <Grid container spacing={{ xs: 1, sm: 2 }}>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}>
+              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                 <Typography variant="caption" sx={{ color: colors.textSecondary }}>Market Cap</Typography>
                 <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>
                   {stockData.marketCap ? `₹ ${stockData.marketCap.toLocaleString()}` : 'N/A'}
@@ -677,7 +675,7 @@ const StockDetailsPage = () => {
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}>
+              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                 <Typography variant="caption" sx={{ color: colors.textSecondary }}>P/E Ratio</Typography>
                 <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>
                   {stockData.trailingPE ? stockData.trailingPE.toFixed(2) : 'N/A'}
@@ -685,7 +683,7 @@ const StockDetailsPage = () => {
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}>
+              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                 <Typography variant="caption" sx={{ color: colors.textSecondary }}>Dividend Yield</Typography>
                 <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>
                   {stockData.dividendYield ? `${(stockData.dividendYield * 100).toFixed(2)}%` : 'N/A'}
@@ -693,7 +691,7 @@ const StockDetailsPage = () => {
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}>
+              <Box sx={{ p: 1.5, bgcolor: colors.background, borderRadius: 2, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                 <Typography variant="caption" sx={{ color: colors.textSecondary }}>Profit Margins</Typography>
                 <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>
                   {stockData.profitMargins ? `${(stockData.profitMargins * 100).toFixed(2)}%` : 'N/A'}
@@ -713,11 +711,11 @@ const StockDetailsPage = () => {
           mb: 3,
           overflow: "hidden",
           bgcolor: colors.cardBg, 
-          borderRadius: 2, 
+          borderRadius: 2, // Changed from 0 to 2
           boxShadow: 0, 
           border: `1px solid ${colors.divider}` 
         }}>
-          <CardContent sx={{ p: 3, borderRadius: 2 }}>
+          <CardContent sx={{ p: 3, borderRadius: 2 }}> {/* Changed from 0 to 2 */}
             <Grid container spacing={0} columns={{ xs: 1, sm: 2, md: 4, lg: 4 }}> 
               {allFinancialMetrics.map((metric, index) => (
                 <Grid item xs={1} sm={1} md={1} lg={1} key={index}> 
@@ -741,10 +739,7 @@ const StockDetailsPage = () => {
                 </Grid>
               ))}
             </Grid>
-            <Typography variant="caption" sx={{ mt: 2, display: 'block', color: colors.textSecondary }}>
-              Note: Financial statement data is fetched from the API where available; otherwise, it's marked as N/A.
-              Hover over metrics for explanations.
-            </Typography>
+            {/* Removed the text: "Note: Financial statement data is fetched from the API where available; otherwise, it's marked as N/A. Hover over metrics for explanations." */}
           </CardContent>
         </Card>
         {/* End Unified Financial Overview Section */}
@@ -763,7 +758,7 @@ const StockDetailsPage = () => {
               overflow: "hidden",
               p: 3, 
               bgcolor: colors.cardBg, 
-              borderRadius: 2, 
+              borderRadius: 2, // Changed from 0 to 2
               boxShadow: 0, 
               border: `1px solid ${colors.divider}`, 
               display: 'flex', 
@@ -776,25 +771,25 @@ const StockDetailsPage = () => {
               </Typography>
               <Grid container spacing={2} sx={{ mt: 2 }}>
                 <Grid item xs={12} sm={6}> 
-                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}> 
+                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                     <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Industry</Typography>
                     <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>{stockData.industry || "Information Technology Services"}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}>
+                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                     <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Sector</Typography>
                     <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>{stockData.sector || "Technology"}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}>
+                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                     <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Employees</Typography>
                     <Typography variant="body1" fontWeight="medium" sx={{ color: colors.textPrimary }}>{stockData.fullTimeEmployees?.toLocaleString() || "Unknown"}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}>
+                  <Box sx={{ bgcolor: colors.background, p: 2, borderRadius: 2, boxShadow: 0, border: `1px solid ${colors.divider}` }}> {/* Changed from 0 to 2 */}
                     <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Website</Typography>
                     <Typography variant="body1" fontWeight="medium" sx={{ 
                       overflow: "hidden", 
@@ -819,7 +814,7 @@ const StockDetailsPage = () => {
           mb: 3,
           overflow: "hidden",
           bgcolor: colors.cardBg, 
-          borderRadius: 2, 
+          borderRadius: 2, // Changed from 0 to 2
           boxShadow: 0, 
           border: `1px solid ${colors.divider}` 
         }}>
@@ -902,7 +897,7 @@ const StockDetailsPage = () => {
                           height: 250, 
                           display: "flex", 
                           flexDirection: "column", 
-                          borderRadius: 2, 
+                          borderRadius: 2, // Changed from 0 to 2
                           boxShadow: 0, 
                           bgcolor: colors.background, 
                           border: `1px solid ${colors.divider}`, 
@@ -976,9 +971,7 @@ const StockDetailsPage = () => {
                       ))}
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', color: colors.textSecondary }}>
-                    Scroll horizontally to view all news articles
-                  </Typography>
+                  {/* Removed the text: "Scroll horizontally to view all news articles" */}
                   <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
                     <IconButton 
                       size="small" 
@@ -1045,7 +1038,7 @@ const StockDetailsPage = () => {
                           height: 250, 
                           display: "flex", 
                           flexDirection: "column", 
-                          borderRadius: 2, 
+                          borderRadius: 2, // Changed from 0 to 2
                           boxShadow: 0, 
                           bgcolor: colors.background, 
                           border: `1px solid ${colors.divider}`, 
@@ -1132,9 +1125,7 @@ const StockDetailsPage = () => {
                       ))}
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', color: colors.textSecondary }}>
-                    Scroll horizontally to view all announcements
-                  </Typography>
+                  {/* Removed the text: "Scroll horizontally to view all announcements" */}
                   <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
                     <IconButton 
                       size="small" 
@@ -1174,6 +1165,25 @@ const StockDetailsPage = () => {
         <AIAnalysisSection stockCode={stockCode} colors={colors} /> 
         
         <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.divider, borderWidth: 2 }} />
+
+        {/* Footer */}
+        <Box sx={{ 
+          textAlign: 'left', // Changed from 'center' to 'left'
+          py: 2, 
+          color: colors.textSecondary, 
+          fontSize: '0.8rem',
+          mt: 4 // Add some top margin to separate from content
+        }}>
+          Created by{" "}
+          <a 
+            href="https://airzac.com/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{ color: colors.headerAccent, textDecoration: 'none', fontWeight: 'bold' }}
+          >
+            Airzac
+          </a>
+        </Box>
       </Container>
     </>
   );

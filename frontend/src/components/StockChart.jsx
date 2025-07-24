@@ -96,15 +96,12 @@ const StockChart = ({ stockCode, chartBg }) => { // Accept chartBg prop
     <Box sx={{ 
       textAlign: "center", 
       padding: 3, 
-      bgcolor: darkChartColors.background, // Apply background color here
+      bgcolor: "#1A1A1D", // Apply background color here
       borderRadius: 2, // Changed to 0 for classical look
-      color: darkChartColors.textPrimary, // Default text color for the chart box
-      boxShadow: 0, // Changed to 0 for classical look
-      border: `1px solid ${darkChartColors.divider}` // Added border for classical look
+      color: "#1A1A1D", // Default text color for the chart box
+     
     }}>
-      <Typography variant="h6" fontWeight="bold" sx={{ color: darkChartColors.textPrimary, marginBottom: 2 }}>
-        Price Chart ({stockCode})
-      </Typography>
+      
 
       {/* Chart Container */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
