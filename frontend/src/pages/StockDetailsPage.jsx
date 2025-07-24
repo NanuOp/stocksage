@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
-  Container, Typography, Grid, Card, Divider, CircularProgress
+  Container, Typography, Grid, Card, Divider, CircularProgress, Box 
 } from "@mui/material";
 
 // Import newly created components
@@ -13,6 +13,7 @@ import GainersLosersTabs from "../components/GainersLosersTabs";
 import FinancialOverviewSection from "../components/FinancialOverviewSection";
 import BusinessSummarySection from "../components/BusinessSummarySection";
 import NewsAndAnnouncementsSection from "../components/NewsAndAnnouncementsSection";
+import FinancialChartsSection from "../components/FinancialChartsSection"; // Import the new component
 
 import Navbar from "../components/Navbar";
 import StockChart from "../components/StockChart";
@@ -25,13 +26,17 @@ const StockDetailsPage = () => {
   const [stockData, setStockData] = useState(null);
   const [newsData, setNewsData] = useState([]);
   const [announcementsData, setAnnouncementsData] = useState([]);
+  const [eventsData, setEventsData] = useState([]); // Added eventsData state
   const [topGainers, setTopGainers] = useState([]);
   const [topLosers, setTopLosers] = useState([]);
   const [peersData, setPeersData] = useState([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true); // Added isLoadingEvents state
   const [isLoadingGainersLosers, setIsLoadingGainersLosers] = useState(true);
   const [isLoadingPeers, setIsLoadingPeers] = useState(true);
+  const [dividendsData, setDividendsData] = useState([]); // State for dividends
+  const [splitsData, setSplitsData] = useState([]);      // State for splits
 
   const API_BASE_URL = "http://localhost:8000/api";
 
@@ -57,6 +62,8 @@ const StockDetailsPage = () => {
       if (response.data.success) {
         const data = response.data.data;
         setStockData(data);
+        setDividendsData(response.data.dividends || []); // Set dividends data
+        setSplitsData(response.data.splits || []);      // Set splits data
 
         const metrics = [
           { label: "Prev Close", value: `₹ ${Number(data.regularMarketPreviousClose).toFixed(2)}` },
@@ -153,6 +160,31 @@ const StockDetailsPage = () => {
     }
   };
 
+  const fetchEvents = async () => { // Added fetchEvents function
+    setIsLoadingEvents(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/stock/${stockCode}/events/`);
+      if (response.data.success && response.data.events) {
+        const formattedEvents = response.data.events.map((event, index) => ({
+          id: index,
+          title: event.subject,
+          summary: event.subject, 
+          publishedDate: event.date,
+          url: event.attachment,
+          source: "Corporate Event"
+        }));
+        setEventsData(formattedEvents);
+      } else {
+        setEventsData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEventsData([]);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
   const fetchTopGainersLosers = async () => {
     setIsLoadingGainersLosers(true);
     try {
@@ -205,6 +237,7 @@ const StockDetailsPage = () => {
     fetchStockDetails();
     fetchStockNews();
     fetchAnnouncements();
+    fetchEvents(); // Call fetchEvents
     fetchTopGainersLosers();
     fetchPeers();
     const interval = setInterval(fetchStockDetails, 60000);
@@ -287,30 +320,42 @@ const StockDetailsPage = () => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.divider }} />
+        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.background }} />
 
-        <KeyMetricsOverview stockData={stockData} colors={colors} />
+        {/* Business Summary and Key Metrics side-by-side (swapped positions) */}
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}> {/* Added flex container styles */}
+            <BusinessSummarySection stockData={stockData} colors={colors} />
+          </Grid>
+          
+          <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}> {/* Added flex container styles */}
+            <KeyMetricsOverview stockData={stockData} colors={colors} />
+          </Grid>
+        </Grid>
 
-        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.divider }} />
+        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.background }} />
 
         <FinancialOverviewSection 
           allFinancialMetrics={allFinancialMetrics} 
           colors={colors} 
         />
-
-        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.divider }} />
-
-        <BusinessSummarySection stockData={stockData} colors={colors} />
         
-        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.divider }} />
+        <Divider sx={{ my: { xs: 3, sm: 4 }, borderColor: colors.background }} />
+
+        <FinancialChartsSection stockCode={stockCode} colors={colors} /> {/* NEW COMPONENT */}
 
         <NewsAndAnnouncementsSection 
           newsData={newsData} 
-          announcementsData={announcementsData} 
+          announcementsData={announcementsData}
+          eventsData={eventsData} 
           isLoadingNews={isLoadingNews} 
           isLoadingAnnouncements={isLoadingAnnouncements} 
+          isLoadingEvents={isLoadingEvents} 
           stockCode={stockCode} 
           colors={colors} 
+          dividendsData={stockData.dividends || []} // Pass dividends data
+          splitsData={stockData.splits || []}      // Pass splits data
         />
         
         <AIAnalysisSection stockCode={stockCode} colors={colors} /> 

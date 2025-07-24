@@ -625,3 +625,93 @@ def get_peers(request, security_id):
             "success": False,
             "error": "Stock not found"
         })
+
+@api_view(['GET'])
+def get_stock_events(request, security_id):
+    try:
+        n = NSELive()
+        announcements = n.corporate_announcements(symbol=security_id)
+        events = []
+
+        # Filter corporate announcements for past 1 year
+        one_year_ago = datetime.now() - timedelta(days=365)
+        for ann in announcements:
+            ann_date = datetime.strptime(ann['an_dt'], "%d-%b-%Y %H:%M:%S")
+            if ann_date >= one_year_ago:
+                events.append({
+                    "date": ann['an_dt'],
+                    "subject": ann.get('subject') or ann.get('desc'),
+                    "attachment": ann.get('attchmntFile')
+                })
+
+        # --- YFinance data ---
+        stock = yf.Ticker(f"{security_id}.NS")
+
+        # Splits
+        splits_raw = stock.splits.to_dict()
+        splits = []
+        for date, value in splits_raw.items():
+            splits.append({
+                "date": date.strftime("%Y-%m-%d") if hasattr(date, 'strftime') else str(date),
+                "split_ratio": f"1:{int(value)}"
+            })
+
+        # Dividends
+        dividends_raw = stock.dividends.to_dict()
+        dividends = []
+        for date, amount in dividends_raw.items():
+            dividends.append({
+                "date": date.strftime("%Y-%m-%d") if hasattr(date, 'strftime') else str(date),
+                "amount": float(amount)
+            })
+
+        # Quarterly Results
+        quarterly_financials = stock.quarterly_financials
+        quarterly_results = []
+        if not quarterly_financials.empty:
+            for date in quarterly_financials.columns:
+                data = quarterly_financials[date].dropna().to_dict()
+                quarterly_results.append({
+                    "date": str(date.date()) if hasattr(date, 'date') else str(date),
+                    "data": {k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in data.items()}
+                })
+
+        # Annual Results + Revenue + Net Income (Profit/Loss)
+        annual_financials = stock.financials
+        annual_results = []
+        yearly_revenue_profit = []
+        if not annual_financials.empty:
+            for date in annual_financials.columns:
+                data = annual_financials[date].dropna().to_dict()
+                annual_results.append({
+                    "date": str(date.date()) if hasattr(date, 'date') else str(date),
+                    "data": {k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in data.items()}
+                })
+
+                # Extract revenue and net income if present
+                revenue = data.get('Total Revenue') or data.get('TotalRevenue')
+                net_income = data.get('Net Income') or data.get('NetIncome')
+
+                yearly_revenue_profit.append({
+                    "date": str(date.date()) if hasattr(date, 'date') else str(date),
+                    "total_revenue": float(revenue) if revenue else None,
+                    "net_income": float(net_income) if net_income else None
+                })
+
+        # --- Final Response ---
+        return Response({
+            "success": True,
+            "security_id": security_id,
+            "splits": splits,
+            "dividends": dividends,
+            "quarterly_results": quarterly_results,
+            "annual_results": annual_results,
+            "yearly_revenue_profit": yearly_revenue_profit,
+            "events": events
+        })
+
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        })

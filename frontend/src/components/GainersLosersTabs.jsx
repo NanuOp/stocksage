@@ -5,9 +5,10 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward'; // Corrected im
 // Helper component to render Gainer/Loser lists
 const GainerLoserList = ({ data, isGainer, onStockClick, colors }) => (
   <Box sx={{ 
-    maxHeight: 400, 
-    overflowY: 'auto',
-    "&::-webkit-scrollbar": { width: "8px" },
+    maxHeight: 190, // Adjusted maxHeight to visually fit approximately 3 items
+    borderRadius: 4,
+    overflowY: 'auto', // Re-added overflowY for scrolling
+    "&::-webkit-scrollbar": { width: "8px" }, // Re-added scrollbar styling
     "&::-webkit-scrollbar-track": { 
       backgroundColor: colors.background, 
       borderRadius: "10px"
@@ -86,24 +87,24 @@ const GainersLosersTabs = ({ topGainers, topLosers, isLoadingGainersLosers, colo
 
   return (
     <>
-      <Typography variant="h6" fontWeight="bold" color="white" sx={{px: 2, mb: 1.5}}>
-        Top Gainers & Losers
-      </Typography>
+      
       <Card sx={{ 
         mb: 3,
-        overflow: "hidden",
-        bgcolor: colors.cardBg, 
+        overflow: "hidden", 
+        bgcolor: "#1A1A1D", 
         borderRadius: 4,
         boxShadow: 0, 
         flexGrow: 1
       }}>
-        <Box sx={{ display: 'flex', borderBottom: `1px solid ${colors.divider}`, borderRadius: 6 }}>
+        <Box sx={{ display: 'flex', borderBottom: `1px solid ${colors.divider}`, borderRadius: 6, justifyContent: 'flex-start' }}>
           <Box 
             onClick={() => setActiveTab('gainers')}
             sx={{
               flex: 1,
-              textAlign: 'center',
+              textAlign: 'left', 
+              borderRadius: 3,
               py: 2,
+              px: 3, 
               cursor: 'pointer',
               bgcolor: activeTab === 'gainers' ? colors.background : "#1A1A1D", 
               borderBottom: activeTab === 'gainers' ? `1px solid ${colors.headerAccent}` : 'none',
@@ -122,9 +123,11 @@ const GainersLosersTabs = ({ topGainers, topLosers, isLoadingGainersLosers, colo
             onClick={() => setActiveTab('losers')}
             sx={{
               flex: 1,
-              textAlign: 'center',
+              textAlign: 'left', 
               py: 2,
+              px: 3, 
               cursor: 'pointer',
+              borderRadius: 2,
               bgcolor: activeTab === 'losers' ? colors.background : "#1A1A1D",
               borderBottom: activeTab === 'losers' ? `1px solid ${colors.headerAccent}` : 'none',
               transition: 'background-color 0.3s ease' 
@@ -141,15 +144,15 @@ const GainersLosersTabs = ({ topGainers, topLosers, isLoadingGainersLosers, colo
         </Box>
 
         {isLoadingGainersLosers ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 , borderRadius: 2,}}>
             <CircularProgress sx={{ color: colors.headerAccent }} />
           </Box>
         ) : (
-          <Box sx={{ bgcolor: colors.cardBg }}> 
+          <Box sx={{ bgcolor: colors.cardBg , borderRadius: 2,}}> 
             {activeTab === 'gainers' ? (
-              <GainerLoserList data={topGainers} isGainer={true} onStockClick={handleStockClick} colors={colors} />
+              <GainerLoserList data={topGainers} isGainer={true} onStockClick={handleStockClick} colors={colors} /> 
             ) : (
-              <GainerLoserList data={topLosers} isGainer={false} onStockClick={handleStockClick} colors={colors} />
+              <GainerLoserList data={topLosers} isGainer={false} onStockClick={handleStockClick} colors={colors} /> 
             )}
           </Box>
         )}
