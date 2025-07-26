@@ -13,7 +13,9 @@ from .views import (
     get_stock_financials,
     get_stock_announcements,
     get_peers,
-    get_stock_events
+    get_stock_events,
+    
+    
 )
 
 urlpatterns = [
@@ -31,5 +33,7 @@ urlpatterns = [
     path('financials/<str:symbol>/', get_stock_financials, name='get_stock_financials'),
     path('announcements/<str:symbol>/', get_stock_announcements, name='get_stock_announcements'),
     path('stock/<str:security_id>/events/', get_stock_events, name='get_stock_events'),
+    
+
 
 ]

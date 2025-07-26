@@ -15,7 +15,7 @@ const StockSearch = ({ isNavbar = false }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const API_BASE_URL = "https://2a8cc05e1f61.ngrok-free.app/api";
+  const API_BASE_URL = "https://94d3be703f4e.ngrok-free.app/api";
 
   const fetchSuggestions = async (query) => {
     if (!query) {

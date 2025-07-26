@@ -36,3 +36,5 @@ class StockDB(models.Model):
     class Meta:
         managed = False  # Do not create migrations
         db_table = 'api_stock'  # Exact table name
+
+

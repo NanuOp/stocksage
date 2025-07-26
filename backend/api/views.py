@@ -34,8 +34,10 @@ from rest_framework.response import Response
 from .models import StockDB
 nse = Nse()
 
+
+
 # Configure the Gemini API
-GEMINI_API_KEY = "#"
+GEMINI_API_KEY = "AIzaSyDmO0wg72Bx3BAS3XaxkKlBgrn6t9q3ISY"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_models = {
     "flash": genai.GenerativeModel("gemini-2.0-flash"),
