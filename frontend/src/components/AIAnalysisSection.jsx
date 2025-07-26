@@ -8,7 +8,7 @@ const AIAnalysisSection = ({ stockCode, colors }) => { // Accept colors prop
   const [parsedData, setParsedData] = useState({ pros: [], cons: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const API_BASE_URL = "http://localhost:8000/api";
+  const API_BASE_URL = "https://2a8cc05e1f61.ngrok-free.app/api";
 
   useEffect(() => {
     if (stockCode) fetchAnalysisData();

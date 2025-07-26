@@ -26,7 +26,7 @@ const StockChart = ({ stockCode, chartBg }) => { // Accept chartBg prop
   const [showVolume, setShowVolume] = useState(true);
   const [tickValues, setTickValues] = useState([]);
 
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const API_BASE_URL = "https://2a8cc05e1f61.ngrok-free.app/api";
 
   // Define dark theme colors for the chart
   const darkChartColors = {
