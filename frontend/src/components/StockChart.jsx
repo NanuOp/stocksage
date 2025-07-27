@@ -9,6 +9,7 @@ import {
   Tooltip,
   CartesianGrid,
   Bar,
+  Legend // Import Legend for chart legend
 } from "recharts";
 import {
   ToggleButton,
@@ -17,19 +18,20 @@ import {
   Typography,
   FormControlLabel,
   Checkbox,
-} from "@mui/material";
+}
+ from "@mui/material";
 import { format, parseISO } from "date-fns";
 
 const StockChart = ({ stockCode, chartBg }) => {
   const [data, setData] = useState([]);
   const [timeframe, setTimeframe] = useState("1Y");
   const [showVolume, setShowVolume] = useState(true);
-  const [showMA10, setShowMA10] = useState(false);
-  const [showMA50, setShowMA50] = useState(false);
-  const [showMA100, setShowMA100] = useState(false);
+  const [showMA10, setShowMA10] = useState(true);
+  const [showMA20, setShowMA20] = useState(true);
+  const [showMA100, setShowMA100] = useState(true);
   const [tickValues, setTickValues] = useState([]);
 
-  const API_BASE_URL = "http://127.0.0.1:8000/api"; // Your backend API base URL
+  const API_BASE_URL = "https://94d3be703f4e.ngrok-free.app/api"; // Your backend API base URL
 
   const darkChartColors = {
     background: chartBg || "#1A1A1D",
@@ -47,97 +49,65 @@ const StockChart = ({ stockCode, chartBg }) => {
     toggleButtonInactiveBg: "#2C2C30",
     toggleButtonInactiveText: "#A0A0A0",
     labelColor: "#E0E0E0",
-    ma10Stroke: "#FFD700", // Gold for MA10
-    ma50Stroke: "#00CED1", // Dark Cyan for MA50
-    ma100Stroke: "#FF6347", // Tomato for MA100
+    ma10Stroke: "#FFA500", // Orange for MA10
+    ma20Stroke: "#00BFFF", // Deep Sky Blue for MA20
+    ma100Stroke: "#32CD32", // Lime Green for MA100
   };
 
   useEffect(() => {
     fetchData();
   }, [stockCode, timeframe]);
 
-  // Function to calculate Simple Moving Average (SMA) client-side
-  // This will be used for MA50 if the backend doesn't provide it
-  const calculateSMA = (data, period, dataKey = 'Close', newMAKey) => {
-    if (!data || data.length === 0) return data; // Return original data if empty
-
-    const processedData = data.map(item => ({ ...item })); // Create a deep copy to avoid modifying original
-
-    for (let i = 0; i < processedData.length; i++) {
-      if (i >= period - 1) {
-        const sum = processedData.slice(i - period + 1, i + 1).reduce((acc, item) => acc + item[dataKey], 0);
-        processedData[i][newMAKey] = sum / period;
-      } else {
-        processedData[i][newMAKey] = null; // MA is null until enough data points are available
-      }
-    }
-    return processedData;
-  };
-
   const fetchData = async () => {
     try {
-      // 1. Fetch historical data (Close, Volume)
+      // 1. Fetch historical data (Close, Volume) with timeframe
       const historyUrl = `${API_BASE_URL}/stock/${stockCode}/history/?timeframe=${timeframe}`;
-      const historyResponse = await axios.get(historyUrl);
-      let stockData = [];
+      // 2. Fetch moving averages from the backend
+      // Using a fixed large number of days (730 for ~2 years) to ensure enough MA data for most timeframes
+      const maUrl = `${API_BASE_URL}/stock/${stockCode}/moving-averages/?days=4500format=json`;
+
+      const [historyResponse, maResponse] = await Promise.all([
+        axios.get(historyUrl),
+        axios.get(maUrl),
+      ]);
+
+      let stockData = [], maData = [];
 
       if (historyResponse.data.success && historyResponse.data.data) {
-        stockData = historyResponse.data.data
-          .map((item) => ({
-            Date: item.Date,
-            Close: parseFloat(item.Close),
-            Volume: parseFloat(item.Volume),
-          }))
-          .filter((item) => item.Date && !isNaN(item.Close));
+        stockData = historyResponse.data.data.map(item => ({
+          Date: item.Date,
+          Close: parseFloat(item.Close),
+          Volume: parseFloat(item.Volume),
+        }));
       } else {
         console.warn("API returned success: false for historical data or no data.");
       }
-
-      // 2. Fetch moving averages from the new endpoint
-      // Assuming this endpoint returns MA10, MA20, MA100 as per your JSON example
-      const maUrl = `${API_BASE_URL}/stock/${stockCode}/moving-averages/?days=100&timeframe=${timeframe}`; // Added timeframe for consistency
-      const maResponse = await axios.get(maUrl);
-      let maData = [];
 
       if (maResponse.data.success && maResponse.data.data) {
         maData = maResponse.data.data.map(item => ({
           Date: item.Date,
           MA10: item.MA10 ? parseFloat(item.MA10) : null,
-          MA20: item.MA20 ? parseFloat(item.MA20) : null, // Keep MA20 for reference if needed
+          MA20: item.MA20 ? parseFloat(item.MA20) : null,
           MA100: item.MA100 ? parseFloat(item.MA100) : null,
-        })).filter(item => item.Date);
+        }));
       } else {
         console.warn("API returned success: false for moving averages or no data.");
       }
 
-      // 3. Merge historical data and MA data
-      // Use a map for efficient merging by Date
-      const mergedDataMap = new Map();
-
-      stockData.forEach(item => {
-        mergedDataMap.set(item.Date, { ...item });
+      // Merge historical data and MA data
+      const mergedData = stockData.map(stockItem => {
+        const maItem = maData.find(ma => ma.Date === stockItem.Date);
+        return {
+          ...stockItem,
+          ...(maItem || {}), // Merge MA data if found, otherwise an empty object
+        };
       });
 
-      maData.forEach(item => {
-        const existing = mergedDataMap.get(item.Date);
-        if (existing) {
-          mergedDataMap.set(item.Date, { ...existing, ...item });
-        } else {
-          // If MA data has a date not in history (less common but possible), add it
-          mergedDataMap.set(item.Date, { ...item });
-        }
-      });
-
-      let finalData = Array.from(mergedDataMap.values()).sort((a, b) => new Date(a.Date) - new Date(b.Date));
-
-      // 4. Calculate MA50 client-side if not provided by backend
-      // Check if MA50 key exists in the first non-null MA entry
-      const hasMA50FromBackend = finalData.some(item => item.MA50 !== undefined && item.MA50 !== null);
-
-      if (!hasMA50FromBackend) {
-        finalData = calculateSMA(finalData, 50, 'Close', 'MA50');
-      }
+      let finalData = mergedData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
       
+      // Removed the post-processing loop that truncated MA data
+      // The MA lines will now display for all available data points from the API
+
       setData(finalData);
       updateTickValues(finalData);
 
@@ -175,6 +145,7 @@ const StockChart = ({ stockCode, chartBg }) => {
             <p key={index} style={{ color: entry.color || darkChartColors.tooltipTextSecondary }}>
               {entry.dataKey === "Close" ? `Price: ₹${entry.value.toFixed(2)}` :
                entry.dataKey === "Volume" ? `Vol: ${entry.value.toLocaleString()}` :
+               // Handle MA data keys for tooltip
                entry.dataKey.startsWith("MA") ? `${entry.dataKey}: ₹${entry.value ? entry.value.toFixed(2) : 'N/A'}` :
                `${entry.dataKey}: ${entry.value}`}
             </p>
@@ -242,14 +213,15 @@ const StockChart = ({ stockCode, chartBg }) => {
             />
 
             <Tooltip content={<CustomTooltip />} />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} /> {/* Add Legend component */}
 
             {showVolume && <Bar yAxisId="left" dataKey="Volume" fill={darkChartColors.barFill} opacity={0.15} name="Volume" barSize={4} />}
             <Line yAxisId="right" type="monotone" dataKey="Close" stroke={darkChartColors.lineStroke} strokeWidth={3} dot={false} name="Price (₹)" />
             
-            {/* Moving Average Lines */}
-            {showMA10 && <Line yAxisId="right" type="monotone" dataKey="MA10" stroke={darkChartColors.ma10Stroke} strokeWidth={1.5} dot={false} name="MA10" />}
-            {showMA50 && <Line yAxisId="right" type="monotone" dataKey="MA50" stroke={darkChartColors.ma50Stroke} strokeWidth={1.5} dot={false} name="MA50" />}
-            {showMA100 && <Line yAxisId="right" type="monotone" dataKey="MA100" stroke={darkChartColors.ma100Stroke} strokeWidth={1.5} dot={false} name="MA100" />}
+            {/* Moving Average Lines - removed label prop */}
+            {showMA10 && <Line yAxisId="right" type="monotone" dataKey="MA10" stroke={darkChartColors.ma10Stroke} strokeWidth={2} dot={false} name="MA10" />}
+            {showMA20 && <Line yAxisId="right" type="monotone" dataKey="MA20" stroke={darkChartColors.ma20Stroke} strokeWidth={2} dot={false} name="MA20" />}
+            {showMA100 && <Line yAxisId="right" type="monotone" dataKey="MA100" stroke={darkChartColors.ma100Stroke} strokeWidth={2} dot={false} name="MA100" />}
 
           </ComposedChart>
         </ResponsiveContainer>
@@ -344,43 +316,19 @@ const StockChart = ({ stockCode, chartBg }) => {
 
         {/* Checkboxes for Moving Averages */}
         <FormControlLabel 
-          control={
-            <Checkbox 
-              checked={showMA10} 
-              onChange={() => setShowMA10(!showMA10)} 
-              sx={{ color: darkChartColors.ma10Stroke, padding: '4px' }} 
-            />
-          } 
-          label={
-            <Typography sx={{ color: "white", fontSize: "14px" }}>MA10</Typography> 
-          } 
-          sx={{ marginRight: 0, marginLeft: 1 }} 
+          control={<Checkbox checked={showMA10} onChange={() => setShowMA10(!showMA10)} sx={{ color: darkChartColors.ma10Stroke, padding: '4px' }} />}
+          label={<Typography sx={{ color: darkChartColors.ma10Stroke, fontSize: 14 }}>MA10</Typography>}
+          sx={{ marginRight: 0, marginLeft: 1 }}
         />
         <FormControlLabel 
-          control={
-            <Checkbox 
-              checked={showMA50} 
-              onChange={() => setShowMA50(!showMA50)} 
-              sx={{ color: darkChartColors.ma50Stroke, padding: '4px' }} 
-            />
-          } 
-          label={
-            <Typography sx={{ color: "white", fontSize: "14px" }}>MA50</Typography> 
-          } 
-          sx={{ marginRight: 0, marginLeft: 1 }} 
+          control={<Checkbox checked={showMA20} onChange={() => setShowMA20(!showMA20)} sx={{ color: darkChartColors.ma20Stroke, padding: '4px' }} />}
+          label={<Typography sx={{ color: darkChartColors.ma20Stroke, fontSize: 14 }}>MA20</Typography>}
+          sx={{ marginRight: 0, marginLeft: 1 }}
         />
         <FormControlLabel 
-          control={
-            <Checkbox 
-              checked={showMA100} 
-              onChange={() => setShowMA100(!showMA100)} 
-              sx={{ color: darkChartColors.ma100Stroke, padding: '4px' }} 
-            />
-          } 
-          label={
-            <Typography sx={{ color: "white", fontSize: "14px" }}>MA100</Typography> 
-          } 
-          sx={{ marginRight: 0, marginLeft: 1 }} 
+          control={<Checkbox checked={showMA100} onChange={() => setShowMA100(!showMA100)} sx={{ color: darkChartColors.ma100Stroke, padding: '4px' }} />}
+          label={<Typography sx={{ color: darkChartColors.ma100Stroke, fontSize: 14 }}>MA100</Typography>}
+          sx={{ marginRight: 0, marginLeft: 1 }}
         />
       </Box>
     </Box>
