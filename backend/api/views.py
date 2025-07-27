@@ -1,3 +1,4 @@
+from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -32,6 +33,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import StockDB
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
 nse = Nse()
 
 
@@ -790,3 +793,35 @@ def get_intraday_stock_data(request, symbol):
         return Response({"success": True, "symbol": symbol, "interval": interval, "period": period, "data": data})
     except Exception as e:
         return Response({"success": False, "error": str(e)}, status=500)
+
+@csrf_exempt
+def signup_view(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        email = data.get('email', '')
+
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'error': 'Username already taken'})
+
+        user = User.objects.create_user(username=username, password=password, email=email)
+        return JsonResponse({'success': True, 'message': 'User created successfully'})
+
+@csrf_exempt
+def login_view(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return JsonResponse({'success': True, 'message': 'Logged in'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid credentials'})
+
+@csrf_exempt
+def logout_view(request):
+    logout(request)
+    return JsonResponse({'success': True, 'message': 'Logged out'})
