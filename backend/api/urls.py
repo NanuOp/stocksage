@@ -14,8 +14,8 @@ from .views import (
     get_stock_announcements,
     get_peers,
     get_stock_events,
-    
-    
+    get_moving_averages,
+    get_intraday_stock_data,
 )
 
 urlpatterns = [
@@ -33,6 +33,8 @@ urlpatterns = [
     path('financials/<str:symbol>/', get_stock_financials, name='get_stock_financials'),
     path('announcements/<str:symbol>/', get_stock_announcements, name='get_stock_announcements'),
     path('stock/<str:security_id>/events/', get_stock_events, name='get_stock_events'),
+    path("stock/<str:security_id>/moving-averages/", get_moving_averages),
+    path('stock/<str:symbol>/intraday/', get_intraday_stock_data),
     
 
 

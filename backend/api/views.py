@@ -289,7 +289,7 @@ def get_historical_data(request, security_id):
         end_date = datetime.today().strftime("%Y-%m-%d")
 
         timeframe_mapping = {
-            "1D": 1,
+            "1D": 2,
             "1W": 7,
             "1M": 30,
             "6M": 182,
@@ -717,3 +717,76 @@ def get_stock_events(request, security_id):
             "success": False,
             "error": str(e)
         })
+
+from rest_framework.decorators import api_view
+@api_view(["GET"])
+def get_moving_averages(request, security_id):
+    try:
+        ticker = f"{security_id.upper()}.NS"
+        end_date = datetime.today()
+        start_date = end_date - timedelta(days=4549)
+
+        df = yf.download(ticker, start=start_date, end=end_date, group_by='ticker', auto_adjust=True)
+
+        if df.empty:
+            return Response({
+                "success": True,
+                "ticker": security_id,
+                "exchange": "NSE",
+                "data_points": 0,
+                "data": []
+            })
+
+        # Flatten multi-index columns
+        df.columns = ['_'.join(filter(None, col)).strip() if isinstance(col, tuple) else col for col in df.columns]
+
+        # Find Close column dynamically
+        close_col = next((col for col in df.columns if "Close" in col), None)
+        if not close_col:
+            return Response({"success": False, "error": f"No Close column found in: {df.columns.tolist()}"})
+
+        # ✅ This part must be outside the `if not close_col` block
+        df["MA10"] = df[close_col].rolling(window=10).mean()
+        df["MA20"] = df[close_col].rolling(window=20).mean()
+        df["MA100"] = df[close_col].rolling(window=100).mean()
+        df = df.reset_index()
+        df["Date"] = df["Date"].astype(str)
+
+        # Prepare output
+        result_df = df[["Date", close_col, "MA10", "MA20", "MA100"]].dropna()
+        result_df.rename(columns={close_col: "Close"}, inplace=True)
+
+        return Response({
+            "success": True,
+            "ticker": security_id,
+            "exchange": "NSE",
+            "data_points": len(result_df),
+            "data": result_df.to_dict(orient="records")
+        })
+
+    except Exception as e:
+        return Response({"success": False, "error": str(e)})
+
+
+@api_view(['GET'])
+def get_intraday_stock_data(request, symbol):
+    symbol = symbol.upper() + ".NS"  # default to NSE
+    stock = yf.Ticker(symbol)
+    interval = request.GET.get('interval', '5m')  # Default to 5-minute data
+    period = request.GET.get('period', '5d')      # Default to 1-day data
+
+    try:
+        stock = yf.Ticker(symbol)
+        df = stock.history(interval=interval, period=period)
+
+        if df.empty:
+            return Response({"success": False, "error": "No data found for this interval and period."}, status=404)
+
+        df.reset_index(inplace=True)
+        df['Datetime'] = df['Datetime'].astype(str)
+
+        data = df[['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']].to_dict(orient='records')
+
+        return Response({"success": True, "symbol": symbol, "interval": interval, "period": period, "data": data})
+    except Exception as e:
+        return Response({"success": False, "error": str(e)}, status=500)
