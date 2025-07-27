@@ -27,7 +27,7 @@ const StockChart = ({ stockCode, chartBg }) => {
   const [timeframe, setTimeframe] = useState("1Y");
   const [showVolume, setShowVolume] = useState(true);
   const [showMA10, setShowMA10] = useState(true);
-  const [showMA20, setShowMA20] = useState(true);
+  // Removed showMA20 state as it's no longer needed
   const [showMA100, setShowMA100] = useState(true);
   const [tickValues, setTickValues] = useState([]);
 
@@ -50,7 +50,7 @@ const StockChart = ({ stockCode, chartBg }) => {
     toggleButtonInactiveText: "#A0A0A0",
     labelColor: "#E0E0E0",
     ma10Stroke: "#FFA500", // Orange for MA10
-    ma20Stroke: "#00BFFF", // Deep Sky Blue for MA20
+    ma20Stroke: "#00BFFF", // Deep Sky Blue for MA20 - Retained for color definition, but not used for line
     ma100Stroke: "#32CD32", // Lime Green for MA100
   };
 
@@ -63,8 +63,8 @@ const StockChart = ({ stockCode, chartBg }) => {
       // 1. Fetch historical data (Close, Volume) with timeframe
       const historyUrl = `${API_BASE_URL}/stock/${stockCode}/history/?timeframe=${timeframe}`;
       // 2. Fetch moving averages from the backend
-      // Using a fixed large number of days (730 for ~2 years) to ensure enough MA data for most timeframes
-      const maUrl = `${API_BASE_URL}/stock/${stockCode}/moving-averages/?days=4500format=json`;
+      // Changed 'days' parameter to 1000 as requested
+      const maUrl = `${API_BASE_URL}/stock/${stockCode}/moving-averages/?days=1000&format=json`;
 
       const [historyResponse, maResponse] = await Promise.all([
         axios.get(historyUrl),
@@ -87,7 +87,7 @@ const StockChart = ({ stockCode, chartBg }) => {
         maData = maResponse.data.data.map(item => ({
           Date: item.Date,
           MA10: item.MA10 ? parseFloat(item.MA10) : null,
-          MA20: item.MA20 ? parseFloat(item.MA20) : null,
+          MA20: item.MA20 ? parseFloat(item.MA20) : null, // Still fetch MA20 data, but won't display the line
           MA100: item.MA100 ? parseFloat(item.MA100) : null,
         }));
       } else {
@@ -95,6 +95,7 @@ const StockChart = ({ stockCode, chartBg }) => {
       }
 
       // Merge historical data and MA data
+      // No truncation of MA data here; all available data from API will be used.
       const mergedData = stockData.map(stockItem => {
         const maItem = maData.find(ma => ma.Date === stockItem.Date);
         return {
@@ -105,9 +106,6 @@ const StockChart = ({ stockCode, chartBg }) => {
 
       let finalData = mergedData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
       
-      // Removed the post-processing loop that truncated MA data
-      // The MA lines will now display for all available data points from the API
-
       setData(finalData);
       updateTickValues(finalData);
 
@@ -218,9 +216,9 @@ const StockChart = ({ stockCode, chartBg }) => {
             {showVolume && <Bar yAxisId="left" dataKey="Volume" fill={darkChartColors.barFill} opacity={0.15} name="Volume" barSize={4} />}
             <Line yAxisId="right" type="monotone" dataKey="Close" stroke={darkChartColors.lineStroke} strokeWidth={3} dot={false} name="Price (₹)" />
             
-            {/* Moving Average Lines - removed label prop */}
+            {/* Moving Average Lines */}
             {showMA10 && <Line yAxisId="right" type="monotone" dataKey="MA10" stroke={darkChartColors.ma10Stroke} strokeWidth={2} dot={false} name="MA10" />}
-            {showMA20 && <Line yAxisId="right" type="monotone" dataKey="MA20" stroke={darkChartColors.ma20Stroke} strokeWidth={2} dot={false} name="MA20" />}
+            {/* Removed MA20 Line component */}
             {showMA100 && <Line yAxisId="right" type="monotone" dataKey="MA100" stroke={darkChartColors.ma100Stroke} strokeWidth={2} dot={false} name="MA100" />}
 
           </ComposedChart>
@@ -320,11 +318,7 @@ const StockChart = ({ stockCode, chartBg }) => {
           label={<Typography sx={{ color: darkChartColors.ma10Stroke, fontSize: 14 }}>MA10</Typography>}
           sx={{ marginRight: 0, marginLeft: 1 }}
         />
-        <FormControlLabel 
-          control={<Checkbox checked={showMA20} onChange={() => setShowMA20(!showMA20)} sx={{ color: darkChartColors.ma20Stroke, padding: '4px' }} />}
-          label={<Typography sx={{ color: darkChartColors.ma20Stroke, fontSize: 14 }}>MA20</Typography>}
-          sx={{ marginRight: 0, marginLeft: 1 }}
-        />
+        {/* Removed MA20 Checkbox */}
         <FormControlLabel 
           control={<Checkbox checked={showMA100} onChange={() => setShowMA100(!showMA100)} sx={{ color: darkChartColors.ma100Stroke, padding: '4px' }} />}
           label={<Typography sx={{ color: darkChartColors.ma100Stroke, fontSize: 14 }}>MA100</Typography>}
