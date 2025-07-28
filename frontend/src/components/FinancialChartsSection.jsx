@@ -10,7 +10,7 @@ const FinancialChartsSection = ({ stockCode, colors }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = "https://94d3be703f4e.ngrok-free.app/api";
+  const API_BASE_URL = "https://d8b089cf382c.ngrok-free.app/api";
 
   useEffect(() => {
     if (stockCode) fetchFinancialData();
