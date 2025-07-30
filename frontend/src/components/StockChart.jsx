@@ -72,7 +72,7 @@ const StockChart = ({ stockCode, chartBg }) => {
 
   const yAxisRef = useRef(null); // Create a ref for the YAxis component
 
-  const API_BASE_URL = "https://d8b089cf382c.ngrok-free.app/api";
+  const API_BASE_URL = "https://d5a7ca9523a9.ngrok-free.app/api";
 
   const darkChartColors = {
     background: chartBg || "#1A1A1D",

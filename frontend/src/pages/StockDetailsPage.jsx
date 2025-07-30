@@ -38,7 +38,7 @@ const StockDetailsPage = () => {
   const [dividendsData, setDividendsData] = useState([]); // State for dividends
   const [splitsData, setSplitsData] = useState([]);      // State for splits
 
-  const API_BASE_URL = "https://d8b089cf382c.ngrok-free.app/api";
+  const API_BASE_URL = "https://d5a7ca9523a9.ngrok-free.app/api";
 
   const colors = {
     background: "#1A1A1D",

@@ -22,7 +22,7 @@ const NewsAndAnnouncementsSection = ({
   const announcementsContainerRef = useRef(null);
   const eventsContainerRef = useRef(null); // New ref for events scroll
 
-  const API_BASE_URL = "https://d8b089cf382c.ngrok-free.app/api";
+  const API_BASE_URL = "https://d5a7ca9523a9.ngrok-free.app/api";
 
   // Helper function for date parsing to normalize for comparison
   const parseDateString = (dateString) => {
