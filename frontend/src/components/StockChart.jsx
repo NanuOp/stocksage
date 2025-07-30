@@ -56,16 +56,16 @@ const CustomTooltip = ({ active, payload, label, darkChartColors, chartType }) =
 };
 
 const StockChart = ({ stockCode, chartBg }) => {
-  const [data, setData] = useState([]);
-  const [intradayData, setIntradayData] = useState([]);
+  const [data, setData] = useState([]); // Historical data
+  const [intradayData, setIntradayData] = useState([]); // Intraday data
   const [timeframe, setTimeframe] = useState("1Y");
   const [intradayInterval, setIntradayInterval] = useState('5m');
   const [intradayPeriod, setIntradayPeriod] = useState('1d');
   const [showVolume, setShowVolume] = useState(true);
-  const [showMA10, setShowMA10] = useState(true);
-  const [showMA100, setShowMA100] = useState(true);
+  const [showMA10, setShowMA10] = useState(false); // Changed to false
+  const [showMA100, setShowMA100] = useState(false); // Changed to false
   const [tickValues, setTickValues] = useState([]);
-  const [activeChartTab, setActiveChartTab] = useState('historical');
+  const [activeChartTab, setActiveChartTab] = useState('intraday'); // Default to intraday
   const [chartType, setChartType] = useState('line');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -101,6 +101,7 @@ const StockChart = ({ stockCode, chartBg }) => {
     candlestickDownFill: "#FF4500", // Red for bearish candles
   };
 
+  // Define valid periods for each interval
   const intervalPeriods = {
     '1m': ['1d', '5d', '7d'],
     '2m': ['1d', '5d', '7d', '60d'],
@@ -111,16 +112,37 @@ const StockChart = ({ stockCode, chartBg }) => {
     '90m': ['1d', '5d', '7d', '60d', '90d', '730d'],
   };
 
+  // Main data fetching effect
   useEffect(() => {
-    fetchData();
-  }, [stockCode, timeframe, activeChartTab, intradayInterval, intradayPeriod]);
+    let intervalId;
 
+    const fetchAndSetData = async () => {
+      await fetchData(); // Call fetchData
+    };
+
+    fetchAndSetData(); // Call once initially
+
+    // Set up interval only for intraday data
+    if (activeChartTab === 'intraday') {
+      intervalId = setInterval(fetchAndSetData, 15000); // Refresh every 15 seconds
+    }
+
+    // Cleanup function to clear the interval
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [stockCode, timeframe, activeChartTab, intradayInterval, intradayPeriod]); // Dependencies for re-fetching and interval control
+
+  // Effect to adjust intradayPeriod if the selected interval changes and the current period becomes invalid
   useEffect(() => {
     const validPeriodsForCurrentInterval = intervalPeriods[intradayInterval];
     if (validPeriodsForCurrentInterval && !validPeriodsForCurrentInterval.includes(intradayPeriod)) {
+      // If the current period is not valid for the new interval, set to the first valid period
       setIntradayPeriod(validPeriodsForCurrentInterval[0]);
     }
-  }, [intradayInterval, intradayPeriod]);
+  }, [intradayInterval, intradayPeriod]); // Depend on both to re-evaluate when either changes
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -128,6 +150,7 @@ const StockChart = ({ stockCode, chartBg }) => {
 
     try {
       if (activeChartTab === 'historical') {
+        // Fetch historical data
         const historyUrl = `${API_BASE_URL}/stock/${stockCode}/history/?timeframe=${timeframe}`;
         const maUrl = `${API_BASE_URL}/stock/${stockCode}/moving-averages/?days=1000&format=json`;
 
@@ -173,10 +196,11 @@ const StockChart = ({ stockCode, chartBg }) => {
         let finalData = mergedData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
 
         setData(finalData);
-        setIntradayData([]);
+        setIntradayData([]); // Clear intraday data when historical is active
         updateTickValues(finalData, 'historical');
 
       } else if (activeChartTab === 'intraday') {
+        // Fetch intraday data
         const intradayUrl = `${API_BASE_URL}/stock/${stockCode}/intraday/?format=json&interval=${intradayInterval}&period=${intradayPeriod}`;
         const intradayResponse = await axios.get(intradayUrl);
 
@@ -192,7 +216,7 @@ const StockChart = ({ stockCode, chartBg }) => {
           }));
           processedIntradayData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
           setIntradayData(processedIntradayData);
-          setData([]);
+          setData([]); // Clear historical data when intraday is active
           updateTickValues(processedIntradayData, 'intraday');
         } else {
           console.warn("API returned success: false for intraday data or no data.");
@@ -213,7 +237,7 @@ const StockChart = ({ stockCode, chartBg }) => {
     if (chartData.length === 0) return setTickValues([]);
     let totalTicks = 5;
     if (type === 'intraday') {
-        totalTicks = Math.min(chartData.length, 6);
+        totalTicks = Math.min(chartData.length, 6); // More ticks for intraday for better granularity
     }
     const step = Math.floor(chartData.length / (totalTicks - 1));
     const selectedTicks = Array.from({ length: totalTicks }, (_, i) =>
@@ -227,7 +251,7 @@ const StockChart = ({ stockCode, chartBg }) => {
       return format(parseISO(tick), "MMM yyyy");
     } else {
       const date = parseISO(tick);
-      if (isNaN(date.getTime())) return tick;
+      if (isNaN(date.getTime())) return tick; // Handle invalid dates gracefully
       return format(date, "HH:mm");
     }
   };
@@ -236,11 +260,8 @@ const StockChart = ({ stockCode, chartBg }) => {
 
   // Custom shape for Candlestick Bar
   const CandlestickShape = (props) => {
-    const { x, width, payload, darkChartColors } = props; // Removed yAxis from destructuring here
+    const { x, width, payload } = props;
     const yScale = yAxisRef.current?.scale; // Access scale from the ref
-
-    // Debug: Log all props received by CandlestickShape
-    console.log("CandlestickShape: All props received:", props);
 
     // Ensure payload and its OHLC properties exist
     if (!payload || typeof payload.Open === 'undefined' || typeof payload.High === 'undefined' ||
@@ -271,9 +292,6 @@ const StockChart = ({ stockCode, chartBg }) => {
     const highY = yScale(High);
     const lowY = yScale(Low);
 
-    // Debug: Log scaled Y values
-    console.log(`CandlestickShape: Scaled Y values for ${payload.Date}: OpenY=${openY}, CloseY=${closeY}, HighY=${highY}, LowY=${lowY}`);
-
     // Check if scaled Y coordinates are valid numbers
     if (isNaN(openY) || isNaN(closeY) || isNaN(highY) || isNaN(lowY)) {
       console.error("CandlestickShape: One or more scaled Y coordinates are NaN. Check YAxis domain and data values.", { Open, High, Low, Close, openY, highY, lowY, closeY, yScale });
@@ -283,13 +301,9 @@ const StockChart = ({ stockCode, chartBg }) => {
     // Body of the candle
     const bodyTop = Math.min(openY, closeY);
     const bodyHeight = Math.abs(openY - closeY);
-    // const bodyBottom = bodyTop + bodyHeight; // This variable is not used in the return statement
-
+    
     // Wick (thin line)
     const wickX = x + width / 2;
-
-    // Debug: Log body and wick dimensions
-    console.log(`CandlestickShape: Body (Top: ${bodyTop}, Height: ${bodyHeight}), Wick (X: ${wickX}, HighY: ${highY}, LowY: ${lowY})`);
 
     // Add a minimum height for visibility if the body is too small
     const minBodyHeight = 1; // Minimum pixel height for candle body
@@ -340,31 +354,8 @@ const StockChart = ({ stockCode, chartBg }) => {
       color: darkChartColors.background,
     }}>
 
-      {/* Tab Selector for Historical/Intraday */}
+      {/* Tab Selector for Intraday/Historical */}
       <Box sx={{ display: 'flex', width: '100%', mb: 3 }}>
-        <Box
-          onClick={() => setActiveChartTab('historical')}
-          sx={{
-            flex: 1,
-            textAlign: 'center',
-            py: 1.5,
-            cursor: 'pointer',
-            bgcolor: darkChartColors.tabBg,
-            borderBottom: activeChartTab === 'historical' ? `2px solid ${darkChartColors.tabActiveBorder}` : `1px solid ${darkChartColors.tabBorder}`,
-            transition: 'border-bottom 0.3s ease, background-color 0.3s ease',
-            '&:hover': {
-              bgcolor: darkChartColors.toggleButtonInactiveBg,
-            }
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            fontWeight="bold"
-            sx={{ color: activeChartTab === 'historical' ? darkChartColors.tabTextActive : darkChartColors.tabTextInactive }}
-          >
-            Historical
-          </Typography>
-        </Box>
         <Box
           onClick={() => setActiveChartTab('intraday')}
           sx={{
@@ -386,6 +377,29 @@ const StockChart = ({ stockCode, chartBg }) => {
             sx={{ color: activeChartTab === 'intraday' ? darkChartColors.tabTextActive : darkChartColors.tabTextInactive }}
           >
             Intraday
+          </Typography>
+        </Box>
+        <Box
+          onClick={() => setActiveChartTab('historical')}
+          sx={{
+            flex: 1,
+            textAlign: 'center',
+            py: 1.5,
+            cursor: 'pointer',
+            bgcolor: darkChartColors.tabBg,
+            borderBottom: activeChartTab === 'historical' ? `2px solid ${darkChartColors.tabActiveBorder}` : `1px solid ${darkChartColors.tabBorder}`,
+            transition: 'border-bottom 0.3s ease, background-color 0.3s ease',
+            '&:hover': {
+              bgcolor: darkChartColors.toggleButtonInactiveBg,
+            }
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            fontWeight="bold"
+            sx={{ color: activeChartTab === 'historical' ? darkChartColors.tabTextActive : darkChartColors.tabTextInactive }}
+          >
+            Historical
           </Typography>
         </Box>
       </Box>
@@ -505,7 +519,7 @@ const StockChart = ({ stockCode, chartBg }) => {
                 tickLine={false}
                 axisLine={false}
                 domain={['dataMin - 10', 'dataMax + 10']}
-                ref={yAxisRef} 
+                ref={yAxisRef}
               />
 
               <Tooltip content={<CustomTooltip darkChartColors={darkChartColors} chartType={chartType} />} />
@@ -556,53 +570,6 @@ const StockChart = ({ stockCode, chartBg }) => {
         marginTop: 2,
         flexWrap: 'wrap'
       }}>
-        {/* Timeframe Selector (only for historical data) */}
-        {activeChartTab === 'historical' && (
-          <ToggleButtonGroup
-            value={timeframe}
-            exclusive
-            onChange={(event, newValue) => newValue && setTimeframe(newValue)}
-            sx={{
-              display: "flex",
-              flexWrap: 'wrap',
-              justifyContent: "flex-end",
-              '& .MuiToggleButtonGroup-grouped': {
-                borderRadius: '0 !important',
-                border: `1px solid ${darkChartColors.gridStroke} !important`,
-                margin: '0 !important',
-              }
-            }}
-          >
-            {["1D", "1W", "1M", "6M", "1Y", "3Y", "5Y", "MAX"].map((option) => (
-              <ToggleButton
-                key={option}
-                value={option}
-                sx={{
-                  textTransform: "none",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: darkChartColors.toggleButtonInactiveText,
-                  bgcolor: darkChartColors.toggleButtonInactiveBg,
-                  "&.Mui-selected": {
-                    bgcolor: darkChartColors.toggleButtonActiveBg,
-                    color: darkChartColors.toggleButtonActiveText,
-                    '&:hover': {
-                      bgcolor: darkChartColors.toggleButtonActiveBg,
-                    }
-                  },
-                  "&:hover": {
-                    bgcolor: darkChartColors.toggleButtonInactiveBg,
-                  },
-                  minWidth: '40px',
-                  padding: '4px 8px',
-                }}
-              >
-                {option}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-        )}
-
         {/* Intraday Interval Selector (only for intraday data) */}
         {activeChartTab === 'intraday' && (
           <ToggleButtonGroup
@@ -667,7 +634,55 @@ const StockChart = ({ stockCode, chartBg }) => {
               }
             }}
           >
+            {/* Dynamically render periods based on selected interval */}
             {intervalPeriods[intradayInterval]?.map((option) => (
+              <ToggleButton
+                key={option}
+                value={option}
+                sx={{
+                  textTransform: "none",
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                  color: darkChartColors.toggleButtonInactiveText,
+                  bgcolor: darkChartColors.toggleButtonInactiveBg,
+                  "&.Mui-selected": {
+                    bgcolor: darkChartColors.toggleButtonActiveBg,
+                    color: darkChartColors.toggleButtonActiveText,
+                    '&:hover': {
+                      bgcolor: darkChartColors.toggleButtonActiveBg,
+                    }
+                  },
+                  "&:hover": {
+                    bgcolor: darkChartColors.toggleButtonInactiveBg,
+                  },
+                  minWidth: '40px',
+                  padding: '4px 8px',
+                }}
+              >
+                {option}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        )}
+
+        {/* Timeframe Selector (only for historical data) */}
+        {activeChartTab === 'historical' && (
+          <ToggleButtonGroup
+            value={timeframe}
+            exclusive
+            onChange={(event, newValue) => newValue && setTimeframe(newValue)}
+            sx={{
+              display: "flex",
+              flexWrap: 'wrap',
+              justifyContent: "flex-end",
+              '& .MuiToggleButtonGroup-grouped': {
+                borderRadius: '0 !important',
+                border: `1px solid ${darkChartColors.gridStroke} !important`,
+                margin: '0 !important',
+              }
+            }}
+          >
+            {["1D", "1W", "1M", "6M", "1Y", "3Y", "5Y", "MAX"].map((option) => (
               <ToggleButton
                 key={option}
                 value={option}

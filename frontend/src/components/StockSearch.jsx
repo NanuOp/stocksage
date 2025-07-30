@@ -92,7 +92,7 @@ const StockSearch = ({ isNavbar = false }) => {
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder="Search for stocks..."
+            placeholder="Search Stocks or ETF's or Mutual Funds..."
             variant="standard"
             InputProps={{
               ...params.InputProps,

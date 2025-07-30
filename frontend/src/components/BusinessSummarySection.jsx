@@ -5,7 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 const BusinessSummarySection = ({ stockData, colors }) => {
   const [openModal, setOpenModal] = useState(false);
   const summaryText = stockData.longBusinessSummary || 
-    `${stockData.longName}, together with its subsidiaries, provides consulting, technology, outsourcing, and next-generation digital services.`;
+    `${stockData.longName}, `;
   
   const MAX_SUMMARY_LENGTH = 300; // Define a character limit for truncation
   const isTruncated = summaryText.length > MAX_SUMMARY_LENGTH;

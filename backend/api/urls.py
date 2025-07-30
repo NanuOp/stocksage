@@ -18,7 +18,9 @@ from .views import (
     get_intraday_stock_data,
     signup_view, 
     login_view, 
-    logout_view
+    logout_view,
+    #
+    
 )
 
 urlpatterns = [
@@ -40,5 +42,6 @@ urlpatterns = [
     path('stock/<str:symbol>/intraday/', get_intraday_stock_data),
     path('signup/', signup_view),
     path('login/', login_view),
-    path('logout/', logout_view),  
+    path('logout/', logout_view),
+    #path("etfs/", list_etfs, name="list_etfs"),
 ]
